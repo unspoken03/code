@@ -1,1 +1,91 @@
-function _0xb0b8(_0x2b9b6f,_0x15fdc1){const _0x382077=_0x3820();return _0xb0b8=function(_0xb0b855,_0x165cee){_0xb0b855=_0xb0b855-0x1a7;let _0x42905b=_0x382077[_0xb0b855];return _0x42905b;},_0xb0b8(_0x2b9b6f,_0x15fdc1);}(function(_0x41d9a9,_0x16c188){const _0x4d69b2=_0xb0b8,_0x38a54b=_0x41d9a9();while(!![]){try{const _0x5e7772=-parseInt(_0x4d69b2(0x1b2))/0x1*(-parseInt(_0x4d69b2(0x1ac))/0x2)+-parseInt(_0x4d69b2(0x1c0))/0x3*(parseInt(_0x4d69b2(0x1b6))/0x4)+-parseInt(_0x4d69b2(0x1bc))/0x5+-parseInt(_0x4d69b2(0x1b1))/0x6*(-parseInt(_0x4d69b2(0x1a7))/0x7)+-parseInt(_0x4d69b2(0x1bd))/0x8+parseInt(_0x4d69b2(0x1b4))/0x9*(parseInt(_0x4d69b2(0x1aa))/0xa)+parseInt(_0x4d69b2(0x1ab))/0xb*(parseInt(_0x4d69b2(0x1ba))/0xc);if(_0x5e7772===_0x16c188)break;else _0x38a54b['push'](_0x38a54b['shift']());}catch(_0xa26a0e){_0x38a54b['push'](_0x38a54b['shift']());}}}(_0x3820,0xb570c),(function(){'use strict';const _0x56c70e=_0xb0b8;const _0x2472aa=_0x56c70e(0x1bf),_0x391540=document[_0x56c70e(0x1be)](_0x56c70e(0x1b8));_0x391540['textContent']='\x0a\x20\x20\x20\x20\x20\x20\x20\x20@keyframes\x20i{0%{filter:blur(10px);backdrop-filter:blur(0)}to{filter:blur(0);backdrop-filter:blur(20px)}}\x0a\x20\x20\x20\x20\x20\x20\x20\x20@keyframes\x20o{0%{filter:blur(0);backdrop-filter:blur(20px)}to{filter:blur(10px);backdrop-filter:blur(0)}}\x0a\x20\x20\x20\x20\x20\x20\x20\x20.d{display:flex;flex-direction:column;align-items:center;position:fixed;left:50%;transform:translateX(-50%);top:0;z-index:9999;}\x0a\x20\x20\x20\x20\x20\x20\x20\x20.t{width:176px;height:8px;background:#fff;border-radius:100px;margin-top:9px;display:flex;align-items:center;justify-content:center;cursor:pointer}\x0a\x20\x20\x20\x20\x20\x20\x20\x20.m{width:726px;height:50px;background:rgba(204,204,204,.29);border-radius:100px;display:none;align-items:center;justify-content:center;box-shadow:0\x2017px\x2020.8px\x20#0003;padding:9px\x2020px;gap:10px;overflow:hidden;opacity:0;margin-top:0;filter:blur(5px);backdrop-filter:blur(0);transition:.5s\x20opacity,.3s\x20margin-top}\x0a\x20\x20\x20\x20\x20\x20\x20\x20.m.n{opacity:1;margin-top:9px;animation:i\x20.2s\x20forwards}\x0a\x20\x20\x20\x20\x20\x20\x20\x20.m.o{opacity:0;margin-top:0;animation:o\x20.1s\x20forwards}\x0a\x20\x20\x20\x20\x20\x20\x20\x20.x{margin-top:17px;color:#757575;font-family:sans-serif;font-weight:700;font-size:17px;text-align:center;user-select:none}\x0a\x20\x20\x20\x20\x20\x20\x20\x20.c{display:flex;justify-content:center;align-items:center;height:41px;width:140px;background:rgba(255,255,255,.37);backdrop-filter:blur(5px);border-radius:100px;cursor:pointer;transition:opacity\x20.2s}\x0a\x20\x20\x20\x20\x20\x20\x20\x20.c:hover{background:rgba(255,255,255,.45)}\x0a\x20\x20\x20\x20\x20\x20\x20\x20.c:active,.c.a{background:rgba(255,255,255,.65)}\x0a\x20\x20\x20\x20',document[_0x56c70e(0x1b9)][_0x56c70e(0x1b7)](_0x391540);const _0x59b4d=document[_0x56c70e(0x1be)](_0x56c70e(0x1ae));_0x59b4d['innerHTML']=_0x2472aa,document['body'][_0x56c70e(0x1b7)](_0x59b4d);let _0x58d7aa=0x0;const _0x16862e=document[_0x56c70e(0x1b0)]('.t'),_0x4013d7=document['querySelector']('.m');_0x16862e[_0x56c70e(0x1a8)]=_0xd7046f=>{const _0x813778=_0x56c70e;_0x58d7aa=!_0x58d7aa,_0x58d7aa?(_0x4013d7['style'][_0x813778(0x1a9)]='flex',_0x4013d7['offsetHeight'],_0x4013d7[_0x813778(0x1b5)]['remove']('o'),_0x4013d7[_0x813778(0x1b5)]['add']('n')):(_0x4013d7[_0x813778(0x1b5)]['remove']('n'),_0x4013d7['classList'][_0x813778(0x1b3)]('o'),setTimeout(_0x1f3bc3=>{const _0x59b72e=_0x813778;_0x4013d7[_0x59b72e(0x1b8)][_0x59b72e(0x1a9)]='none',_0x4013d7['classList'][_0x59b72e(0x1af)]('o');},0x1f4));},document[_0x56c70e(0x1ad)]('.c')['forEach'](_0xec2391=>{let _0x212d17=0x0;_0xec2391['onclick']=_0x5b6407=>{const _0x3a7310=_0xb0b8;alert(_0xec2391[_0x3a7310(0x1b0)]('.x')[_0x3a7310(0x1bb)]),_0xec2391['dataset']['t']?(_0x212d17=!_0x212d17,_0xec2391[_0x3a7310(0x1b5)]['toggle']('a',_0x212d17)):(_0xec2391[_0x3a7310(0x1b5)][_0x3a7310(0x1b3)]('a'),setTimeout(_0x1df7ea=>_0xec2391['classList']['remove']('a'),0x3e8));};});}()));function _0x3820(){const _0x290213=['querySelectorAll','div','remove','querySelector','576882QSPjhl','3zsevqM','add','9SFzLeh','classList','88neWpIZ','appendChild','style','head','24ohTBiT','textContent','3093425blTKGU','10638416FlLykl','createElement','\x0a\x20\x20\x20\x20\x20\x20\x20\x20<div\x20class=\x22d\x22>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<div\x20class=\x22t\x22></div>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<div\x20class=\x22m\x22>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<div\x20class=\x22c\x22\x20data-t><h2\x20class=\x22x\x22>Auto\x20Vocab</h2></div>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<div\x20class=\x22c\x22\x20data-t><h2\x20class=\x22x\x22>Auto\x20Answer</h2></div>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<div\x20class=\x22c\x22\x20data-t><h2\x20class=\x22x\x22>Read\x20Speed</h2></div>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<div\x20class=\x22c\x22><h2\x20class=\x22x\x22>Force\x20leave\x20story</h2></div>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<div\x20class=\x22c\x22\x20data-t><h2\x20class=\x22x\x22>Infinite\x20re-reads</h2></div>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<div\x20class=\x22c\x22><h2\x20class=\x22x\x22>Lowest\x20Word\x20count\x20finder</h2></div>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20</div>\x0a\x20\x20\x20\x20\x20\x20\x20\x20</div>\x0a\x20\x20\x20\x20','2541uCfwlf','28JaCwzK','onclick','display','1631740SmZyVY','5988961KIGnzH','715758SteNEB'];_0x3820=function(){return _0x290213;};return _0x3820();}
+// ==UserScript==
+// @name         Lowest word-count
+// @namespace    http://tampermonkey.net/
+// @version      0
+// @match        https://student.readingplus.com/seereader/api/sr/start*
+// @grant        none
+// ==/UserScript==
+(function() {
+    'use strict';
+    // Function to find lowest word count and focus its story
+    function findAndFocusLowestWordCount() {
+        // Get all elements with class word-count
+        const wordCountElements = document.querySelectorAll('.word-count');
+        // Initialize variables to store lowest count and its element
+        let lowestCount = Infinity;
+        let lowestElement = null;
+        // Loop through each element
+        wordCountElements.forEach(element => {
+            // Extract the number from the text (assumes format "XXXX Words")
+            const count = parseInt(element.innerText);
+            // Update lowest if this count is smaller
+            if (count < lowestCount) {
+                lowestCount = count;
+                lowestElement = element;
+            }
+        });
+        // Remove existing result div if it exists
+        const existingDiv = document.getElementById('lowest-word-count-result');
+        if (existingDiv) {
+            existingDiv.remove();
+        }
+        // Create new div to display result
+        const resultDiv = document.createElement('div');
+        resultDiv.id = 'lowest-word-count-result';
+        resultDiv.style.backgroundColor = 'black';
+        resultDiv.style.padding = '10px';
+        resultDiv.style.margin = '10px';
+        resultDiv.style.position = 'fixed';
+        resultDiv.style.bottom = '30px';
+        resultDiv.style.right = '10px';
+        resultDiv.style.zIndex = '9999';
+        resultDiv.style.fontFamily = 'Arial, sans-serif';
+        resultDiv.style.opacity = '0.5';
+        resultDiv.style.color = 'white';
+        resultDiv.style.borderRadius = '20px';
+        if (lowestElement) {
+            // Find the parent story element
+            let storyElement = lowestElement.closest('.story');
+            if (storyElement) {
+                // Focus the story element
+                storyElement.focus();
+                let storyCard = lowestElement.closest('#story-card');
+                if (storyCard) {
+                    storyCard.style.border = "2.5px solid #3BFA00";
+                    storyCard.click(); // Added click here
+                }
+                resultDiv.innerHTML = `Lowest word count: ${lowestElement.innerHTML}`;
+            } else {
+                resultDiv.innerHTML = `Lowest word count: ${lowestElement.innerHTML}`;
+            }
+        } else {
+            resultDiv.innerHTML = 'No word count elements found';
+        }
+        // Add the result div to the body
+        document.body.appendChild(resultDiv);
+    }
+    // Function to check if content is loaded
+    function checkForContent() {
+        const wordCounts = document.querySelectorAll('.word-count');
+        if (wordCounts.length > 0) {
+            // Run once and clear the interval
+            findAndFocusLowestWordCount();
+            if (typeof initialCheckInterval !== 'undefined') {
+                clearInterval(initialCheckInterval);
+            }
+            return true;
+        }
+        return false;
+    }
+    // Run the check frequently at first to catch when content loads
+    const initialCheckInterval = setInterval(() => {
+        const found = checkForContent();
+        if (found) {
+            clearInterval(initialCheckInterval);
+        }
+    }, 500); // Check every 500ms
+    // Clear the interval after 10 seconds if nothing is found
+    setTimeout(() => {
+        clearInterval(initialCheckInterval);
+    }, 10000);
+})();
