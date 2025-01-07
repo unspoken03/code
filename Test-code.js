@@ -1,13 +1,4 @@
-// ==UserScript==
-// @name         Lowest word-count
-// @namespace    http://tampermonkey.net/
-// @version      0
-// @match        https://student.readingplus.com/seereader/api/sr/start*
-// @grant        none
-// ==/UserScript==
-(function() {
-    'use strict';
-    // Function to find lowest word count and focus its story
+  // Function to find lowest word count and focus its story
     function findAndFocusLowestWordCount() {
         // Get all elements with class word-count
         const wordCountElements = document.querySelectorAll('.word-count');
