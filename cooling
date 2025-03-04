@@ -1,0 +1,536 @@
+#!/usr/bin/env python3
+"""
+Raspberry Pi WiFi Hotspot Creator
+This script configures your Raspberry Pi 4B as a WiFi hotspot,
+sharing its existing WiFi connection with other devices.
+It also includes advanced features like device identity spoofing
+and profile management for different network environments.
+"""
+
+import os
+import sys
+import subprocess
+import time
+import argparse
+import re
+import logging
+import json
+import random
+
+# Set up logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[logging.StreamHandler()]
+)
+logger = logging.getLogger(__name__)
+
+def check_sudo():
+    """Check if the script is run with sudo privileges."""
+    if os.geteuid() != 0:
+        logger.error("This script must be run with sudo privileges")
+        sys.exit(1)
+
+def check_dependencies():
+    """Check if required packages are installed and install if missing."""
+    required_packages = ['hostapd', 'dnsmasq', 'iptables', 'wondershaper']
+    missing_packages = []
+    
+    for package in required_packages:
+        result = subprocess.run(['dpkg', '-s', package], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if result.returncode != 0:
+            missing_packages.append(package)
+    
+    if missing_packages:
+        logger.info(f"Installing missing packages: {', '.join(missing_packages)}")
+        subprocess.run(['apt-get', 'update'], check=True)
+        subprocess.run(['apt-get', 'install', '-y'] + missing_packages, check=True)
+        logger.info("All required packages installed successfully")
+    else:
+        logger.info("All required packages are already installed")
+
+def get_connected_wifi():
+    """Get the currently connected WiFi interface and SSID."""
+    try:
+        result = subprocess.run(['iwgetid'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        if result.returncode != 0:
+            logger.error("Not connected to any WiFi network")
+            sys.exit(1)
+        
+        output = result.stdout.strip()
+        interface = output.split(' ')[0]
+        ssid = re.search(r'ESSID:"(.*?)"', output).group(1)
+        
+        logger.info(f"Connected to WiFi network '{ssid}' on interface {interface}")
+        return interface
+    except Exception as e:
+        logger.error(f"Error detecting WiFi connection: {e}")
+        sys.exit(1)
+
+def change_mac_address(interface, new_mac=None):
+    """Change the MAC address of the specified interface.
+    
+    If no MAC is provided, it will generate a random one.
+    """
+    # Take down the interface
+    subprocess.run(['ip', 'link', 'set', 'dev', interface, 'down'], check=True)
+    
+    if not new_mac:
+        # Generate a random MAC address (first octet must be even)
+        mac = [random.randint(0, 255) & 0xFE]  # Ensure it's not a multicast address
+        mac.extend([random.randint(0, 255) for _ in range(5)])
+        new_mac = ':'.join([f'{x:02x}' for x in mac])
+    
+    # Set the new MAC address
+    try:
+        subprocess.run(['ip', 'link', 'set', 'dev', interface, 'address', new_mac], check=True)
+        logger.info(f"Changed MAC address of {interface} to {new_mac}")
+    except subprocess.CalledProcessError:
+        logger.error(f"Failed to change MAC address of {interface}")
+        sys.exit(1)
+    
+    # Bring the interface back up
+    subprocess.run(['ip', 'link', 'set', 'dev', interface, 'up'], check=True)
+    
+    return new_mac
+
+def change_device_identity(interface, mac=None, hostname=None, vendor=None):
+    """Change the device identity (MAC, hostname, and more)."""
+    if mac:
+        change_mac_address(interface, mac)
+    
+    if hostname:
+        # Change hostname
+        subprocess.run(['hostnamectl', 'set-hostname', hostname], check=True)
+        logger.info(f"Changed hostname to {hostname}")
+        
+        # Update /etc/hosts file to match new hostname
+        with open('/etc/hosts', 'r') as f:
+            hosts_content = f.read()
+        
+        # Replace old hostname entries
+        hosts_pattern = re.compile(r'127\.0\.1\.1\s+\S+')
+        new_hosts = hosts_pattern.sub(f'127.0.1.1 {hostname}', hosts_content)
+        
+        with open('/etc/hosts', 'w') as f:
+            f.write(new_hosts)
+    
+    # Change additional device information
+    if vendor:
+        # Modify NetworkManager's dhclient config to send specific vendor info
+        dhclient_conf = '/etc/dhcp/dhclient.conf'
+        
+        # Backup the original if it exists and we haven't backed it up before
+        if os.path.exists(dhclient_conf) and not os.path.exists(f"{dhclient_conf}.bak"):
+            os.rename(dhclient_conf, f"{dhclient_conf}.bak")
+        
+        # Create new dhclient config with vendor-specific options
+        with open(dhclient_conf, 'w') as f:
+            f.write(f"""
+# Custom dhclient configuration for device identity spoofing
+send host-name = "{hostname}";
+send vendor-class-identifier = "{vendor}";
+request subnet-mask, broadcast-address, time-offset, routers,
+        domain-name, domain-name-servers, domain-search, host-name,
+        netbios-name-servers, netbios-scope, interface-mtu,
+        rfc3442-classless-static-routes, ntp-servers;
+            """)
+        
+        logger.info(f"Set vendor identifier to {vendor}")
+
+def load_profile(profile_name):
+    """Load a saved device profile."""
+    profiles_dir = os.path.expanduser('~/.rpi_hotspot/profiles')
+    
+    # Create profiles directory if it doesn't exist
+    if not os.path.exists(profiles_dir):
+        os.makedirs(profiles_dir, exist_ok=True)
+    
+    profile_path = os.path.join(profiles_dir, f"{profile_name}.json")
+    
+    if not os.path.exists(profile_path):
+        logger.error(f"Profile '{profile_name}' not found")
+        return None
+    
+    try:
+        with open(profile_path, 'r') as f:
+            profile = json.load(f)
+        logger.info(f"Loaded profile '{profile_name}'")
+        return profile
+    except Exception as e:
+        logger.error(f"Error loading profile: {e}")
+        return None
+
+def save_profile(profile_name, profile_data):
+    """Save a device profile for future use."""
+    profiles_dir = os.path.expanduser('~/.rpi_hotspot/profiles')
+    
+    # Create profiles directory if it doesn't exist
+    if not os.path.exists(profiles_dir):
+        os.makedirs(profiles_dir, exist_ok=True)
+    
+    profile_path = os.path.join(profiles_dir, f"{profile_name}.json")
+    
+    try:
+        with open(profile_path, 'w') as f:
+            json.dump(profile_data, f, indent=2)
+        logger.info(f"Saved profile '{profile_name}'")
+        return True
+    except Exception as e:
+        logger.error(f"Error saving profile: {e}")
+        return False
+
+def setup_hostapd(interface, ssid='RaspberryPi_AP', password='raspberry', channel=1):
+    """Configure hostapd to create a WiFi access point."""
+    logger.info(f"Setting up hostapd for interface {interface}")
+    
+    # Find available wireless interfaces for AP mode
+    result = subprocess.run(['iw', 'dev'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    interfaces = re.findall(r'Interface\s+(wlan\d+)', result.stdout)
+    
+    # Filter out the interface that's currently connected to WiFi
+    ap_interfaces = [iface for iface in interfaces if iface != interface]
+    
+    if not ap_interfaces:
+        logger.error("No available wireless interface for AP mode")
+        sys.exit(1)
+    
+    ap_interface = ap_interfaces[0]
+    logger.info(f"Using {ap_interface} for the access point")
+    
+    # Create hostapd configuration file
+    hostapd_config = f"""
+interface={ap_interface}
+driver=nl80211
+ssid={ssid}
+hw_mode=g
+channel={channel}
+wmm_enabled=0
+macaddr_acl=0
+auth_algs=1
+ignore_broadcast_ssid=0
+wpa=2
+wpa_passphrase={password}
+wpa_key_mgmt=WPA-PSK
+wpa_pairwise=TKIP
+rsn_pairwise=CCMP
+"""
+    
+    with open('/etc/hostapd/hostapd.conf', 'w') as f:
+        f.write(hostapd_config)
+    
+    # Configure hostapd default file
+    with open('/etc/default/hostapd', 'w') as f:
+        f.write('DAEMON_CONF="/etc/hostapd/hostapd.conf"')
+    
+    return ap_interface
+
+def setup_dnsmasq(interface):
+    """Configure dnsmasq for DHCP server."""
+    logger.info(f"Setting up dnsmasq for interface {interface}")
+    
+    # Backup existing configuration
+    if os.path.exists('/etc/dnsmasq.conf'):
+        os.rename('/etc/dnsmasq.conf', '/etc/dnsmasq.conf.bak')
+    
+    # Create new dnsmasq configuration
+    dnsmasq_config = f"""
+interface={interface}
+dhcp-range=192.168.4.2,192.168.4.20,255.255.255.0,24h
+domain=wlan
+address=/gw.wlan/192.168.4.1
+"""
+    
+    with open('/etc/dnsmasq.conf', 'w') as f:
+        f.write(dnsmasq_config)
+
+def setup_ip_forwarding(source_interface, ap_interface):
+    """Configure IP forwarding and NAT."""
+    logger.info("Setting up IP forwarding and NAT")
+    
+    # Enable IP forwarding
+    with open('/proc/sys/net/ipv4/ip_forward', 'w') as f:
+        f.write('1')
+    
+    # Configure NAT
+    subprocess.run(['iptables', '-t', 'nat', '-A', 'POSTROUTING', '-o', source_interface, '-j', 'MASQUERADE'])
+    subprocess.run(['iptables', '-A', 'FORWARD', '-i', source_interface, '-o', ap_interface, '-m', 'state', '--state', 'RELATED,ESTABLISHED', '-j', 'ACCEPT'])
+    subprocess.run(['iptables', '-A', 'FORWARD', '-i', ap_interface, '-o', source_interface, '-j', 'ACCEPT'])
+    
+    # Save iptables rules
+    subprocess.run(['sh', '-c', 'iptables-save > /etc/iptables.ipv4.nat'])
+    
+    # Make IP forwarding permanent
+    with open('/etc/sysctl.conf', 'r') as f:
+        content = f.read()
+    
+    if 'net.ipv4.ip_forward=1' not in content:
+        with open('/etc/sysctl.conf', 'a') as f:
+            f.write('\n# Enable IP forwarding for WiFi hotspot\nnet.ipv4.ip_forward=1\n')
+
+def configure_ap_interface(ap_interface):
+    """Configure the access point interface."""
+    logger.info(f"Configuring AP interface {ap_interface}")
+    
+    # Set static IP for AP interface
+    subprocess.run(['ip', 'addr', 'flush', 'dev', ap_interface])
+    subprocess.run(['ip', 'addr', 'add', '192.168.4.1/24', 'dev', ap_interface])
+    subprocess.run(['ip', 'link', 'set', 'dev', ap_interface, 'up'])
+
+def additional_device_cloaking():
+    """Apply additional device cloaking techniques to avoid detection."""
+    logger.info("Applying additional device cloaking techniques")
+    
+    # 1. Change browser user-agent by modifying /etc/profile
+    user_agent_script = """
+# Set Chrome/Chromium user agent to match device identity
+if [ -n "$DISPLAY" ]; then
+    export CHROMIUM_USER_AGENT="Mozilla/5.0 (X11; CrOS x86_64 14541.0.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.216 Safari/537.36"
+    alias chromium-browser="chromium-browser --user-agent=\\"$CHROMIUM_USER_AGENT\\""
+    alias chrome="chromium-browser --user-agent=\\"$CHROMIUM_USER_AGENT\\""
+    # Firefox can be configured through preferences
+fi
+"""
+    with open('/etc/profile.d/user-agent.sh', 'w') as f:
+        f.write(user_agent_script)
+    os.chmod('/etc/profile.d/user-agent.sh', 0o755)
+    
+    # 2. Change network traffic patterns
+    # Install network traffic shaping tools
+    subprocess.run(['apt-get', 'install', '-y', 'wondershaper'], check=False)
+    
+    # 3. Randomize probe request interval for WiFi scanning
+    with open('/etc/NetworkManager/conf.d/wifi-scan.conf', 'w') as f:
+        f.write("""
+[connection]
+wifi.scan-rand-mac-address=yes
+
+[device]
+wifi.scan-delay=5000
+""")
+
+    # 4. Change hostname in all relevant places
+    hostname = subprocess.run(['hostname'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True).stdout.strip()
+    
+    # Update /etc/hosts
+    with open('/etc/hosts', 'r') as f:
+        hosts_content = f.read()
+    
+    if '127.0.1.1' in hosts_content:
+        hosts_content = re.sub(r'127\.0\.1\.1\s+\S+', f'127.0.1.1 {hostname}', hosts_content)
+    else:
+        hosts_content += f'\n127.0.1.1 {hostname}\n'
+    
+    with open('/etc/hosts', 'w') as f:
+        f.write(hosts_content)
+    
+    # Update hostname in all remaining places
+    with open('/etc/hostname', 'w') as f:
+        f.write(hostname)
+    
+    logger.info("Device cloaking applied successfully")
+
+def start_services():
+    """Start the required services."""
+    logger.info("Starting hostapd and dnsmasq services")
+    
+    # Stop services if they're already running
+    subprocess.run(['systemctl', 'stop', 'hostapd'])
+    subprocess.run(['systemctl', 'stop', 'dnsmasq'])
+    
+    # Start services
+    subprocess.run(['systemctl', 'start', 'hostapd'])
+    subprocess.run(['systemctl', 'start', 'dnsmasq'])
+    
+    # Enable services to start on boot
+    subprocess.run(['systemctl', 'enable', 'hostapd'])
+    subprocess.run(['systemctl', 'enable', 'dnsmasq'])
+
+def main():
+    parser = argparse.ArgumentParser(description='Raspberry Pi WiFi Hotspot Creator')
+    parser.add_argument('--ssid', default='RaspberryPi_AP', help='SSID for the access point')
+    parser.add_argument('--password', default='raspberry', help='Password for the access point')
+    parser.add_argument('--channel', type=int, default=1, help='WiFi channel for the access point')
+    
+    # Device identity options
+    parser.add_argument('--spoof-mac', help='MAC address to spoof (format: XX:XX:XX:XX:XX:XX)')
+    parser.add_argument('--hostname', help='Hostname to use')
+    parser.add_argument('--random-mac', action='store_true', help='Use a random MAC address')
+    parser.add_argument('--device', choices=['macbook', 'iphone', 'samsung', 'chromebook'], 
+                        help='Spoof as a device type (includes MAC prefix and hostname)')
+    
+    # Profile management
+    parser.add_argument('--profile', help='Use a saved device profile (school, home, etc.)')
+    parser.add_argument('--save-profile', help='Save current settings as a profile')
+    parser.add_argument('--create-school-profile', help='Create school profile with Chromebook MAC (provide the MAC)')
+    parser.add_argument('--create-home-profile', action='store_true', help='Create home profile with iPhone identity')
+    
+    args = parser.parse_args()
+    
+    try:
+        # Check if running with sudo
+        check_sudo()
+        
+        # Check and install dependencies
+        check_dependencies()
+        
+        # Handle profile setup requests
+        if args.create_school_profile:
+            school_profile = {
+                "mac": args.create_school_profile,
+                "hostname": "Chromebook",
+                "vendor": "ChromeOS",
+                "ssid": "SchoolNet_Hotspot",
+                "password": "schoolpass"
+            }
+            save_profile("school", school_profile)
+            logger.info("Created school profile with Chromebook identity")
+            
+            if not args.profile:
+                # Exit after creating profile unless user wants to apply it immediately
+                logger.info("Profile created. Use --profile school to apply it")
+                sys.exit(0)
+                
+        if args.create_home_profile:
+            # Generate a random iPhone MAC
+            iphone_prefix = "00:88:65"  # Apple/iPhone prefix
+            suffix = [f'{random.randint(0, 255):02x}' for _ in range(3)]
+            iphone_mac = f"{iphone_prefix}:{':'.join(suffix)}"
+            
+            home_profile = {
+                "mac": iphone_mac,
+                "hostname": "silent1",
+                "vendor": "iPhone",
+                "ssid": "Home_Hotspot",
+                "password": "homepass"
+            }
+            save_profile("home", home_profile)
+            logger.info("Created home profile with iPhone identity")
+            
+            if not args.profile:
+                # Exit after creating profile unless user wants to apply it immediately
+                logger.info("Profile created. Use --profile home to apply it")
+                sys.exit(0)
+        
+        # Get the currently connected WiFi interface
+        source_interface = get_connected_wifi()
+        
+        # Apply profile if specified
+        if args.profile:
+            profile = load_profile(args.profile)
+            if profile:
+                # Override command line arguments with profile settings
+                if 'mac' in profile:
+                    args.spoof_mac = profile['mac']
+                if 'hostname' in profile:
+                    args.hostname = profile['hostname']
+                if 'vendor' in profile:
+                    vendor = profile['vendor']
+                if 'ssid' in profile:
+                    args.ssid = profile['ssid']
+                if 'password' in profile:
+                    args.password = profile['password']
+                
+                logger.info(f"Applied profile '{args.profile}'")
+        
+        # Handle device identity settings
+        if args.device:
+            # Common device profiles
+            device_info = {
+                'macbook': {
+                    'prefix': '00:1C:42',
+                    'hostname': 'MacBook-Pro',
+                    'vendor': 'Apple MacOS'
+                },
+                'iphone': {
+                    'prefix': '00:88:65',
+                    'hostname': 'iPhone',
+                    'vendor': 'Apple iOS'  
+                },
+                'samsung': {
+                    'prefix': '00:21:19',
+                    'hostname': 'Galaxy-S21',
+                    'vendor': 'Samsung'
+                },
+                'chromebook': {
+                    'prefix': '00:1A:11',
+                    'hostname': 'Chromebook',
+                    'vendor': 'ChromeOS'
+                }
+            }
+            
+            # Generate a MAC with the correct prefix for the selected device
+            device = device_info[args.device]
+            prefix = device['prefix'].split(':')
+            suffix = [f'{random.randint(0, 255):02x}' for _ in range(3)]
+            new_mac = ':'.join(prefix + suffix)
+            
+            # Set the device identity
+            change_device_identity(
+                source_interface, 
+                mac=new_mac,
+                hostname=device['hostname'],
+                vendor=device['vendor']
+            )
+            
+        elif args.spoof_mac:
+            # Apply user-specified MAC and hostname if provided
+            change_device_identity(
+                source_interface, 
+                mac=args.spoof_mac,
+                hostname=args.hostname
+            )
+            
+        elif args.random_mac:
+            # Generate and use a random MAC address
+            change_device_identity(
+                source_interface, 
+                mac=None,  # Will generate random MAC
+                hostname=args.hostname
+            )
+            
+        # Save current settings as a profile if requested
+        if args.save_profile:
+            # Collect current settings
+            current_settings = {
+                "ssid": args.ssid,
+                "password": args.password
+            }
+            
+            # Add MAC and hostname if specified
+            if args.spoof_mac:
+                current_settings["mac"] = args.spoof_mac
+            if args.hostname:
+                current_settings["hostname"] = args.hostname
+                
+            save_profile(args.save_profile, current_settings)
+        
+        # Setup hostapd
+        ap_interface = setup_hostapd(source_interface, args.ssid, args.password, args.channel)
+        
+        # Configure AP interface
+        configure_ap_interface(ap_interface)
+        
+        # Setup dnsmasq
+        setup_dnsmasq(ap_interface)
+        
+        # Setup IP forwarding and NAT
+        setup_ip_forwarding(source_interface, ap_interface)
+        
+        # Apply additional device cloaking if using profile or device spoofing
+        if args.profile or args.device or args.spoof_mac:
+            additional_device_cloaking()
+        
+        # Start services
+        start_services()
+        
+        logger.info(f"WiFi hotspot successfully configured!")
+        logger.info(f"SSID: {args.ssid}")
+        logger.info(f"Password: {args.password}")
+        logger.info(f"IP Address: 192.168.4.1")
+    except Exception as e:
+        logger.error(f"An error occurred: {e}")
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()
