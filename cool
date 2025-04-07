@@ -141,10 +141,82 @@
                 this.splitCooldown = 0;
                 this.mergeTime = 0;
                 this.parentId = null; // For tracking split cells' parent
+                
+                // Soft body physics properties
+                this.points = []; // Points for soft body effect
+                this.numPoints = 10; // Number of points in the cell outline
+                this.pointsAngle = []; // Angle of each point from center
+                this.pointsDistance = []; // Distance of each point from center (varies for soft effect)
+                this.initSoftBody();
+            }
+            
+            // Initialize soft body physics points
+            initSoftBody() {
+                this.points = [];
+                this.pointsAngle = [];
+                this.pointsDistance = [];
+                
+                for (let i = 0; i < this.numPoints; i++) {
+                    const angle = (i / this.numPoints) * 2 * Math.PI;
+                    const distance = this.radius;
+                    this.pointsAngle.push(angle);
+                    this.pointsDistance.push(distance);
+                    this.points.push({
+                        x: this.x + Math.cos(angle) * distance,
+                        y: this.y + Math.sin(angle) * distance,
+                        vx: 0,
+                        vy: 0
+                    });
+                }
+            }
+            
+            // Update soft body physics
+            updateSoftBody() {
+                // Don't apply soft body to viruses or small cells
+                if (this.isVirus || this.radius < 20) return;
+                
+                const stiffness = 0.2; // How stiff the cell membrane is
+                const damping = 0.4; // How quickly oscillations die down
+                const targetDistance = this.radius;
+                
+                // Update points based on cell movement
+                for (let i = 0; i < this.numPoints; i++) {
+                    const angle = this.pointsAngle[i];
+                    const currDistance = this.pointsDistance[i];
+                    
+                    // Apply spring force to keep points at the right distance
+                    const displacement = targetDistance - currDistance;
+                    const springForce = displacement * stiffness;
+                    
+                    // Add slight motion based on velocity
+                    const velocityEffect = 0.05;
+                    const vx = this.velocity.x * velocityEffect;
+                    const vy = this.velocity.y * velocityEffect;
+                    
+                    // Update point's distance
+                    this.pointsDistance[i] += springForce - (this.pointsDistance[i] - targetDistance) * damping;
+                    
+                    // Apply velocity effect to create a trailing motion
+                    const angleOffset = Math.atan2(-this.velocity.y, -this.velocity.x) - angle;
+                    const velocityMagnitude = Math.sqrt(this.velocity.x * this.velocity.x + this.velocity.y * this.velocity.y);
+                    const trailingEffect = 0.05 * velocityMagnitude * Math.cos(angleOffset);
+                    this.pointsDistance[i] -= trailingEffect;
+                    
+                    // Update point position
+                    this.points[i].x = this.x + Math.cos(angle) * this.pointsDistance[i];
+                    this.points[i].y = this.y + Math.sin(angle) * this.pointsDistance[i];
+                }
             }
 
             // Update cell position based on velocity
             update() {
+                // Update cooldowns
+                if (this.splitCooldown > 0) this.splitCooldown--;
+                if (this.mergeTime > 0) this.mergeTime--;
+                
+                // Only mobile cells move (not viruses)
+                if (this.isVirus) return;
+                
                 if (this.isPlayer) {
                     // Calculate direction towards mouse
                     const dx = mouseX - canvas.width / 2;
@@ -152,47 +224,161 @@
                     const distance = Math.sqrt(dx * dx + dy * dy);
                     
                     if (distance > 0) {
-                        this.velocity.x = (dx / distance) * (this.speed * (30 / (this.radius * 0.1 + 30)));
-                        this.velocity.y = (dy / distance) * (this.speed * (30 / (this.radius * 0.1 + 30)));
+                        // Speed decreases as mass increases
+                        const speedFactor = 5 / Math.sqrt(this.radius);
+                        this.velocity.x = (dx / distance) * this.speed * speedFactor;
+                        this.velocity.y = (dy / distance) * this.speed * speedFactor;
                     }
                 } else if (this.isBot) {
-                    // If bot is targeting a new position
+                    let targetX = this.targetX;
+                    let targetY = this.targetY;
+                    let fleeing = false;
+                    
+                    // Bot AI - occasionally change direction
                     if (Math.random() < 0.01) {
                         this.targetX = random(0, worldSize);
                         this.targetY = random(0, worldSize);
                     }
                     
-                    // Calculate direction towards target
-                    const dx = this.targetX - this.x;
-                    const dy = this.targetY - this.y;
+                    // Look for nearest food if small
+                    if (this.radius < 50 && foods.length > 0) {
+                        let closestFood = null;
+                        let closestDistance = Infinity;
+                        
+                        for (const food of foods) {
+                            const dx = food.x - this.x;
+                            const dy = food.y - this.y;
+                            const distance = Math.sqrt(dx * dx + dy * dy);
+                            
+                            if (distance < closestDistance && distance < 300) {
+                                closestDistance = distance;
+                                closestFood = food;
+                            }
+                        }
+                        
+                        if (closestFood) {
+                            targetX = closestFood.x;
+                            targetY = closestFood.y;
+                        }
+                    }
+                    
+                    // Look for threats (larger cells)
+                    let nearestThreat = null;
+                    let threatDistance = Infinity;
+                    
+                    // Check player cells as potential threats
+                    for (const playerCell of playerCells) {
+                        if (playerCell.radius > this.radius * 1.1) {
+                            const dx = playerCell.x - this.x;
+                            const dy = playerCell.y - this.y;
+                            const distance = Math.sqrt(dx * dx + dy * dy);
+                            
+                            if (distance < 300 && distance < threatDistance) {
+                                threatDistance = distance;
+                                nearestThreat = playerCell;
+                            }
+                        }
+                    }
+                    
+                    // Check other bots as potential threats
+                    for (const bot of bots) {
+                        if (bot !== this && bot.radius > this.radius * 1.1) {
+                            const dx = bot.x - this.x;
+                            const dy = bot.y - this.y;
+                            const distance = Math.sqrt(dx * dx + dy * dy);
+                            
+                            if (distance < 300 && distance < threatDistance) {
+                                threatDistance = distance;
+                                nearestThreat = bot;
+                            }
+                        }
+                    }
+                    
+                    // Flee from threat
+                    if (nearestThreat) {
+                        const dx = nearestThreat.x - this.x;
+                        const dy = nearestThreat.y - this.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        
+                        targetX = this.x - dx * 2;
+                        targetY = this.y - dy * 2;
+                        fleeing = true;
+                    }
+                    
+                    // Look for prey (smaller cells to eat)
+                    if (!fleeing) {
+                        let nearestPrey = null;
+                        let preyDistance = Infinity;
+                        
+                        // Check player cells as potential prey
+                        for (const playerCell of playerCells) {
+                            if (this.radius > playerCell.radius * 1.1) {
+                                const dx = playerCell.x - this.x;
+                                const dy = playerCell.y - this.y;
+                                const distance = Math.sqrt(dx * dx + dy * dy);
+                                
+                                if (distance < 400 && distance < preyDistance) {
+                                    preyDistance = distance;
+                                    nearestPrey = playerCell;
+                                }
+                            }
+                        }
+                        
+                        // Check other bots as potential prey
+                        for (const bot of bots) {
+                            if (bot !== this && this.radius > bot.radius * 1.1) {
+                                const dx = bot.x - this.x;
+                                const dy = bot.y - this.y;
+                                const distance = Math.sqrt(dx * dx + dy * dy);
+                                
+                                if (distance < 400 && distance < preyDistance) {
+                                    preyDistance = distance;
+                                    nearestPrey = bot;
+                                }
+                            }
+                        }
+                        
+                        // Chase prey
+                        if (nearestPrey) {
+                            targetX = nearestPrey.x;
+                            targetY = nearestPrey.y;
+                            
+                            // Consider splitting if large enough and prey is within range
+                            if (this.radius > 50 && this.splitCooldown === 0 && 
+                                preyDistance < this.radius * 1.5 && 
+                                this.radius > nearestPrey.radius * 1.75 && 
+                                Math.random() < 0.1) {
+                                this.split(nearestPrey.x, nearestPrey.y);
+                            }
+                        }
+                    }
+                    
+                    // Avoid viruses if large enough to be split by them
+                    if (this.radius > 40) {
+                        for (const virus of viruses) {
+                            const dx = virus.x - this.x;
+                            const dy = virus.y - this.y;
+                            const distance = Math.sqrt(dx * dx + dy * dy);
+                            
+                            if (distance < this.radius + virus.radius + 50) {
+                                // Move away from virus
+                                targetX = this.x - dx * 2;
+                                targetY = this.y - dy * 2;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    // Move towards target
+                    const dx = targetX - this.x;
+                    const dy = targetY - this.y;
                     const distance = Math.sqrt(dx * dx + dy * dy);
                     
                     if (distance > 0) {
-                        this.velocity.x = (dx / distance) * (this.speed * (30 / (this.radius * 0.1 + 30)));
-                        this.velocity.y = (dy / distance) * (this.speed * (30 / (this.radius * 0.1 + 30)));
-                    }
-                    
-                    // Sometimes chase the player if close enough and smaller than the player
-                    if (player && this.radius < player.radius * 0.85) {
-                        const dxPlayer = player.x - this.x;
-                        const dyPlayer = player.y - this.y;
-                        const distanceToPlayer = Math.sqrt(dxPlayer * dxPlayer + dyPlayer * dyPlayer);
-                        
-                        if (distanceToPlayer < 300) {
-                            this.velocity.x = -(dxPlayer / distanceToPlayer) * (this.speed * (30 / (this.radius * 0.1 + 30)));
-                            this.velocity.y = -(dyPlayer / distanceToPlayer) * (this.speed * (30 / (this.radius * 0.1 + 30)));
-                        }
-                    }
-                    // Sometimes chase the player if close enough and larger than the player
-                    else if (player && this.radius > player.radius * 1.1) {
-                        const dxPlayer = player.x - this.x;
-                        const dyPlayer = player.y - this.y;
-                        const distanceToPlayer = Math.sqrt(dxPlayer * dxPlayer + dyPlayer * dyPlayer);
-                        
-                        if (distanceToPlayer < 500) {
-                            this.velocity.x = (dxPlayer / distanceToPlayer) * (this.speed * (30 / (this.radius * 0.1 + 30)));
-                            this.velocity.y = (dyPlayer / distanceToPlayer) * (this.speed * (30 / (this.radius * 0.1 + 30)));
-                        }
+                        // Speed decreases as mass increases
+                        const speedFactor = 5 / Math.sqrt(this.radius);
+                        this.velocity.x = (dx / distance) * this.speed * speedFactor;
+                        this.velocity.y = (dy / distance) * this.speed * speedFactor;
                     }
                 }
 
@@ -203,6 +389,100 @@
                 // Keep within world bounds
                 this.x = Math.max(this.radius, Math.min(worldSize - this.radius, this.x));
                 this.y = Math.max(this.radius, Math.min(worldSize - this.radius, this.y));
+                
+                // Update mass (slowly decrease for large cells)
+                if (this.radius > 50) {
+                    this.mass *= 0.9998; // Very slow decay
+                    this.radius = Math.sqrt(this.mass / Math.PI);
+                }
+            }
+            
+            // Split the cell into two
+            split(targetX, targetY) {
+                if (this.radius < 35) return false; // Too small to split
+                if (this.splitCooldown > 0) return false; // On cooldown
+                
+                // Calculate direction
+                const dx = targetX - this.x;
+                const dy = targetY - this.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                // Create new cell with half the mass
+                const newRadius = this.radius / Math.sqrt(2);
+                this.radius = newRadius;
+                this.mass = Math.PI * this.radius * this.radius;
+                
+                // Create new cell
+                const newCell = new Cell(
+                    this.x,
+                    this.y,
+                    newRadius,
+                    this.color,
+                    this.isPlayer,
+                    this.isBot
+                );
+                
+                newCell.name = this.name;
+                newCell.splitCooldown = 20; // Can't split again immediately
+                newCell.mergeTime = 100; // Time before merging is possible
+                newCell.parentId = this; // Link to parent cell
+                
+                // Add velocity to new cell
+                const ejectionSpeed = 10;
+                if (distance > 0) {
+                    newCell.velocity.x = (dx / distance) * ejectionSpeed;
+                    newCell.velocity.y = (dy / distance) * ejectionSpeed;
+                } else {
+                    newCell.velocity.x = ejectionSpeed;
+                    newCell.velocity.y = 0;
+                }
+                
+                // Set cooldowns
+                this.splitCooldown = 20;
+                this.mergeTime = 100;
+                
+                return newCell;
+            }
+            
+            // Hit a virus
+            hitVirus() {
+                if (this.radius < 35) return []; // Too small to be split by virus
+                
+                const fragments = [];
+                const numberOfFragments = Math.min(Math.floor(this.mass / 100) + 2, 16);
+                const newMass = this.mass / numberOfFragments;
+                const newRadius = Math.sqrt(newMass / Math.PI);
+                
+                for (let i = 0; i < numberOfFragments - 1; i++) {
+                    const angle = (2 * Math.PI * i) / (numberOfFragments - 1);
+                    const ejectionSpeed = 8;
+                    
+                    const fragment = new Cell(
+                        this.x,
+                        this.y,
+                        newRadius,
+                        this.color,
+                        this.isPlayer,
+                        this.isBot
+                    );
+                    
+                    fragment.name = this.name;
+                    fragment.velocity.x = Math.cos(angle) * ejectionSpeed;
+                    fragment.velocity.y = Math.sin(angle) * ejectionSpeed;
+                    fragment.splitCooldown = 20;
+                    fragment.mergeTime = 100;
+                    fragment.parentId = this;
+                    
+                    fragments.push(fragment);
+                }
+                
+                // Resize the original cell
+                this.radius = newRadius;
+                this.mass = newMass;
+                this.splitCooldown = 20;
+                this.mergeTime = 100;
+                
+                return fragments;
             }
             
             // Draw the cell
@@ -221,8 +501,30 @@
                 }
                 
                 ctx.beginPath();
-                ctx.arc(screenX, screenY, this.radius, 0, Math.PI * 2);
-                ctx.fillStyle = this.color;
+                
+                if (this.isVirus) {
+                    // Draw virus with spikes
+                    const spikes = 25;
+                    const outerRadius = this.radius;
+                    const innerRadius = this.radius * 0.9;
+                    
+                    ctx.moveTo(screenX + outerRadius, screenY);
+                    
+                    for (let i = 0; i < spikes * 2; i++) {
+                        const radius = i % 2 === 0 ? outerRadius : innerRadius;
+                        const angle = (Math.PI * i) / spikes;
+                        const x = screenX + radius * Math.cos(angle);
+                        const y = screenY + radius * Math.sin(angle);
+                        ctx.lineTo(x, y);
+                    }
+                    
+                    ctx.fillStyle = '#00AA00'; // Green color for viruses
+                } else {
+                    // Draw normal cell
+                    ctx.arc(screenX, screenY, this.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = this.color;
+                }
+                
                 ctx.fill();
                 ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
                 ctx.lineWidth = 2;
@@ -230,12 +532,21 @@
                 ctx.closePath();
                 
                 // Draw cell name (for player and bots)
-                if (this.isPlayer || this.isBot) {
+                if ((this.isPlayer || this.isBot) && this.radius > 20) {
                     ctx.fillStyle = 'white';
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
                     ctx.font = `${Math.max(12, Math.min(this.radius / 2, 24))}px Arial`;
-                    ctx.fillText(this.isPlayer ? 'You' : 'Bot', screenX, screenY);
+                    
+                    // Draw the name of the cell
+                    ctx.fillText(this.name, screenX, screenY);
+                    
+                    // Draw mass below name if large enough
+                    if (this.radius > 30) {
+                        const massText = Math.floor(this.mass).toString();
+                        ctx.font = `${Math.max(10, Math.min(this.radius / 3, 16))}px Arial`;
+                        ctx.fillText(massText, screenX, screenY + this.radius / 3);
+                    }
                 }
             }
             
@@ -274,7 +585,8 @@
         // Initialize game
         function initGame() {
             // Create player in the center of the world
-            player = new Cell(worldSize / 2, worldSize / 2, 30, getRandomColor(), true);
+            const playerCell = new Cell(worldSize / 2, worldSize / 2, 30, getRandomColor(), true, false);
+            playerCells = [playerCell]; // Add to playerCells array
             
             // Create food pellets
             for (let i = 0; i < foodCount; i++) {
@@ -300,6 +612,66 @@
                         true
                     )
                 );
+            }
+            
+            // Create viruses
+            for (let i = 0; i < virusCount; i++) {
+                viruses.push(
+                    new Cell(
+                        random(0, worldSize),
+                        random(0, worldSize),
+                        30, // Fixed size for viruses
+                        '#00AA00', // Green color
+                        false,
+                        false,
+                        true // Is a virus
+                    )
+                );
+            }
+            
+            // Initialize leaderboard
+            updateLeaderboard();
+        }
+        
+        // Update leaderboard data
+        function updateLeaderboard() {
+            leaderboard = [];
+            
+            // Add player cells
+            for (const cell of playerCells) {
+                leaderboard.push({
+                    name: cell.name,
+                    mass: cell.mass,
+                    isPlayer: true
+                });
+            }
+            
+            // Add bot cells
+            for (const bot of bots) {
+                leaderboard.push({
+                    name: bot.name,
+                    mass: bot.mass,
+                    isPlayer: false
+                });
+            }
+            
+            // Sort by mass
+            leaderboard.sort((a, b) => b.mass - a.mass);
+            
+            // Take top 10
+            leaderboard = leaderboard.slice(0, 10);
+            
+            // Update DOM
+            const leaderboardElement = document.getElementById('leaders');
+            leaderboardElement.innerHTML = '';
+            
+            for (const entry of leaderboard) {
+                const li = document.createElement('li');
+                li.textContent = `${entry.name}: ${Math.floor(entry.mass)}`;
+                if (entry.isPlayer) {
+                    li.style.fontWeight = 'bold';
+                }
+                leaderboardElement.appendChild(li);
             }
         }
         
@@ -346,40 +718,66 @@
             // Clear canvas
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            // Center camera on player
-            cameraX = player.x;
-            cameraY = player.y;
+            // Calculate player's center of mass to position camera
+            let totalMass = 0;
+            let centerX = 0;
+            let centerY = 0;
+            
+            for (const cell of playerCells) {
+                totalMass += cell.mass;
+                centerX += cell.x * cell.mass;
+                centerY += cell.y * cell.mass;
+            }
+            
+            if (totalMass > 0) {
+                cameraX = centerX / totalMass;
+                cameraY = centerY / totalMass;
+            }
             
             // Draw background elements
             drawGrid();
             drawBorder();
             
-            // Update and draw food
+            // Update total score
+            score = Math.floor(totalMass);
+            scoreElement.textContent = `Score: ${score}`;
+            
+            // Draw food
             for (let i = foods.length - 1; i >= 0; i--) {
                 const food = foods[i];
                 food.draw();
-                
-                // Check if player can eat food
-                if (player.collidesWith(food) && player.canEat(food)) {
-                    player.consume(food);
-                    // Replace eaten food
-                    foods.splice(i, 1);
-                    foods.push(
-                        new Cell(
-                            random(0, worldSize),
-                            random(0, worldSize),
-                            random(5, 10),
-                            getRandomColor()
-                        )
-                    );
-                }
             }
             
-            // Update and draw bots
+            // Draw viruses
+            for (const virus of viruses) {
+                virus.draw();
+            }
+            
+            // Process bot cells
             for (let i = bots.length - 1; i >= 0; i--) {
                 const bot = bots[i];
                 bot.update();
                 bot.draw();
+                
+                // Check for merging between bot cells
+                for (let j = i - 1; j >= 0; j--) {
+                    const otherBot = bots[j];
+                    
+                    if (bot.parentId === otherBot || otherBot.parentId === bot) {
+                        if (bot.mergeTime <= 0 && otherBot.mergeTime <= 0 && bot.collidesWith(otherBot)) {
+                            // Merge the cells - remove the smaller one and make the larger one bigger
+                            if (bot.mass > otherBot.mass) {
+                                bot.consume(otherBot);
+                                bots.splice(j, 1);
+                                if (i > j) i--;
+                            } else {
+                                otherBot.consume(bot);
+                                bots.splice(i, 1);
+                                break;
+                            }
+                        }
+                    }
+                }
                 
                 // Bot eating food
                 for (let j = foods.length - 1; j >= 0; j--) {
@@ -399,57 +797,135 @@
                     }
                 }
                 
-                // Bot eating bot
-                for (let j = bots.length - 1; j >= 0; j--) {
-                    if (i !== j) {
-                        const otherBot = bots[j];
-                        if (bot.collidesWith(otherBot) && bot.canEat(otherBot)) {
-                            bot.consume(otherBot);
-                            // Replace eaten bot
-                            bots.splice(j, 1);
-                            bots.push(
-                                new Cell(
-                                    random(0, worldSize),
-                                    random(0, worldSize),
-                                    random(20, 40),
-                                    getRandomColor(),
-                                    false,
-                                    true
-                                )
-                            );
-                            if (i > j) i--; // Adjust index if removed element was before current
+                // Bot hitting virus
+                for (let j = viruses.length - 1; j >= 0; j--) {
+                    const virus = viruses[j];
+                    if (bot.collidesWith(virus) && bot.radius > virus.radius) {
+                        // Bot is split by virus
+                        const fragments = bot.hitVirus();
+                        if (fragments.length > 0) {
+                            bots.push(...fragments);
                         }
                     }
                 }
                 
-                // Check if bot can eat player
-                if (bot.collidesWith(player) && bot.canEat(player)) {
-                    // Game over - restart
-                    gameOver();
-                    return;
+                // Bot eating player cells
+                for (let j = playerCells.length - 1; j >= 0; j--) {
+                    const playerCell = playerCells[j];
+                    if (bot.collidesWith(playerCell) && bot.canEat(playerCell)) {
+                        bot.consume(playerCell);
+                        playerCells.splice(j, 1);
+                        
+                        // Game over if all player cells are gone
+                        if (playerCells.length === 0) {
+                            gameOver();
+                            return;
+                        }
+                    }
                 }
                 
-                // Check if player can eat bot
-                if (player.collidesWith(bot) && player.canEat(bot)) {
-                    player.consume(bot);
-                    // Replace eaten bot
-                    bots.splice(i, 1);
-                    bots.push(
-                        new Cell(
-                            random(0, worldSize),
-                            random(0, worldSize),
-                            random(20, 40),
-                            getRandomColor(),
-                            false,
-                            true
-                        )
-                    );
+                // Player cells eating bot
+                for (let j = playerCells.length - 1; j >= 0; j--) {
+                    const playerCell = playerCells[j];
+                    if (playerCell.collidesWith(bot) && playerCell.canEat(bot)) {
+                        playerCell.consume(bot);
+                        bots.splice(i, 1);
+                        // Replace eaten bot after delay
+                        setTimeout(() => {
+                            if (bots.length < botCount) {
+                                bots.push(
+                                    new Cell(
+                                        random(0, worldSize),
+                                        random(0, worldSize),
+                                        random(20, 40),
+                                        getRandomColor(),
+                                        false,
+                                        true
+                                    )
+                                );
+                            }
+                        }, 2000);
+                        break;
+                    }
                 }
             }
             
-            // Update and draw player last (so it appears on top)
-            player.update();
-            player.draw();
+            // Process player cells
+            for (let i = playerCells.length - 1; i >= 0; i--) {
+                const playerCell = playerCells[i];
+                playerCell.update();
+                playerCell.draw();
+                
+                // Check for merging between player cells
+                for (let j = i - 1; j >= 0; j--) {
+                    const otherCell = playerCells[j];
+                    
+                    if (playerCell.parentId === otherCell || otherCell.parentId === playerCell) {
+                        if (playerCell.mergeTime <= 0 && otherCell.mergeTime <= 0 && playerCell.collidesWith(otherCell)) {
+                            // Merge the cells - remove the smaller one and make the larger one bigger
+                            if (playerCell.mass > otherCell.mass) {
+                                playerCell.consume(otherCell);
+                                playerCells.splice(j, 1);
+                            } else {
+                                otherCell.consume(playerCell);
+                                playerCells.splice(i, 1);
+                                break;
+                            }
+                        }
+                    }
+                }
+                
+                // Player eating food
+                for (let j = foods.length - 1; j >= 0; j--) {
+                    const food = foods[j];
+                    if (playerCell.collidesWith(food) && playerCell.canEat(food)) {
+                        playerCell.consume(food);
+                        // Replace eaten food
+                        foods.splice(j, 1);
+                        foods.push(
+                            new Cell(
+                                random(0, worldSize),
+                                random(0, worldSize),
+                                random(5, 10),
+                                getRandomColor()
+                            )
+                        );
+                    }
+                }
+                
+                // Player hitting virus
+                for (let j = viruses.length - 1; j >= 0; j--) {
+                    const virus = viruses[j];
+                    if (playerCell.collidesWith(virus) && playerCell.radius > virus.radius) {
+                        // Player is split by virus
+                        const fragments = playerCell.hitVirus();
+                        if (fragments.length > 0) {
+                            playerCells.push(...fragments);
+                            // Remove virus after it splits player
+                            viruses.splice(j, 1);
+                            // Add new virus somewhere else
+                            setTimeout(() => {
+                                viruses.push(
+                                    new Cell(
+                                        random(0, worldSize),
+                                        random(0, worldSize),
+                                        30,
+                                        '#00AA00',
+                                        false,
+                                        false,
+                                        true
+                                    )
+                                );
+                            }, 5000);
+                        }
+                    }
+                }
+            }
+            
+            // Update leaderboard every 10 frames
+            if (Math.random() < 0.1) {
+                updateLeaderboard();
+            }
             
             // Keep the game running
             requestAnimationFrame(gameLoop);
@@ -462,6 +938,8 @@
             scoreElement.textContent = `Score: ${score}`;
             foods = [];
             bots = [];
+            playerCells = [];
+            viruses = [];
             
             // Show game over message
             ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
@@ -491,6 +969,46 @@
             mouseY = e.clientY;
         });
         
+        // Handle keyboard input
+        window.addEventListener('keydown', (e) => {
+            // Space key for splitting
+            if (e.code === 'Space') {
+                // Only split if there are player cells
+                if (playerCells.length > 0) {
+                    const newCells = [];
+                    
+                    // Check each player cell for splitting
+                    for (const cell of playerCells) {
+                        if (cell.radius >= 35 && cell.splitCooldown === 0) {
+                            // Calculate direction towards mouse
+                            const dx = mouseX - canvas.width / 2;
+                            const dy = mouseY - canvas.height / 2;
+                            const distance = Math.sqrt(dx * dx + dy * dy);
+                            
+                            let targetX, targetY;
+                            if (distance > 0) {
+                                targetX = cell.x + (dx / distance) * 1000; // Far in the direction of mouse
+                                targetY = cell.y + (dy / distance) * 1000;
+                            } else {
+                                targetX = cell.x + 1000; // Default to right if no direction
+                                targetY = cell.y;
+                            }
+                            
+                            const newCell = cell.split(targetX, targetY);
+                            if (newCell) {
+                                newCells.push(newCell);
+                            }
+                        }
+                    }
+                    
+                    // Add all new cells at once
+                    if (newCells.length > 0) {
+                        playerCells.push(...newCells);
+                    }
+                }
+            }
+        });
+        
         // Handle window resize
         window.addEventListener('resize', () => {
             canvas.width = window.innerWidth;
@@ -500,6 +1018,6 @@
         // Start the game
         initGame();
         gameLoop();
-    </script
+    </script>
 </body>
 </html>
