@@ -142,69 +142,59 @@
                 this.mergeTime = 0;
                 this.parentId = null; // For tracking split cells' parent
                 
-                // Soft body physics properties
-                this.points = []; // Points for soft body effect
-                this.numPoints = 10; // Number of points in the cell outline
-                this.pointsAngle = []; // Angle of each point from center
-                this.pointsDistance = []; // Distance of each point from center (varies for soft effect)
+                // Soft body properties
+                this.points = []; // Points around the circumference
+                this.pointCount = 25; // Number of points
+                this.pointsAngle = []; // Current angle of each point
+                this.pointsTargetAngle = []; // Target angle for smooth movement
+                this.jiggleAmount = 0.1; // Amount of jiggle (softness)
+                this.jiggleSpeed = 0.05; // Speed of jiggle
                 this.initSoftBody();
             }
             
-            // Initialize soft body physics points
+            // Initialize soft body points
             initSoftBody() {
-                this.points = [];
-                this.pointsAngle = [];
-                this.pointsDistance = [];
-                
-                for (let i = 0; i < this.numPoints; i++) {
-                    const angle = (i / this.numPoints) * 2 * Math.PI;
-                    const distance = this.radius;
+                for (let i = 0; i < this.pointCount; i++) {
+                    const angle = (i / this.pointCount) * Math.PI * 2;
                     this.pointsAngle.push(angle);
-                    this.pointsDistance.push(distance);
+                    this.pointsTargetAngle.push(angle);
                     this.points.push({
-                        x: this.x + Math.cos(angle) * distance,
-                        y: this.y + Math.sin(angle) * distance,
-                        vx: 0,
-                        vy: 0
+                        x: this.x + Math.cos(angle) * this.radius,
+                        y: this.y + Math.sin(angle) * this.radius,
+                        distance: this.radius
                     });
                 }
             }
             
-            // Update soft body physics
+            // Update soft body
             updateSoftBody() {
-                // Don't apply soft body to viruses or small cells
-                if (this.isVirus || this.radius < 20) return;
+                if (this.isVirus) return; // Viruses don't jiggle
                 
-                const stiffness = 0.2; // How stiff the cell membrane is
-                const damping = 0.4; // How quickly oscillations die down
-                const targetDistance = this.radius;
+                // Skip for very small cells
+                if (this.radius < 15) return;
                 
-                // Update points based on cell movement
-                for (let i = 0; i < this.numPoints; i++) {
+                // Update jiggle factor based on mass and speed
+                const speedFactor = Math.sqrt(this.velocity.x * this.velocity.x + this.velocity.y * this.velocity.y);
+                const massJiggleFactor = Math.min(1, 30 / this.radius);
+                const jiggle = this.jiggleAmount * massJiggleFactor * (1 + speedFactor * 0.1);
+                
+                // Update each point
+                for (let i = 0; i < this.pointCount; i++) {
+                    // Move target angle slightly
+                    if (Math.random() < 0.1) {
+                        this.pointsTargetAngle[i] = this.pointsAngle[i] + (Math.random() * 2 - 1) * jiggle;
+                    }
+                    
+                    // Smooth transition to target angle
+                    this.pointsAngle[i] += (this.pointsTargetAngle[i] - this.pointsAngle[i]) * this.jiggleSpeed;
+                    
+                    // Calculate new position
                     const angle = this.pointsAngle[i];
-                    const currDistance = this.pointsDistance[i];
-                    
-                    // Apply spring force to keep points at the right distance
-                    const displacement = targetDistance - currDistance;
-                    const springForce = displacement * stiffness;
-                    
-                    // Add slight motion based on velocity
-                    const velocityEffect = 0.05;
-                    const vx = this.velocity.x * velocityEffect;
-                    const vy = this.velocity.y * velocityEffect;
-                    
-                    // Update point's distance
-                    this.pointsDistance[i] += springForce - (this.pointsDistance[i] - targetDistance) * damping;
-                    
-                    // Apply velocity effect to create a trailing motion
-                    const angleOffset = Math.atan2(-this.velocity.y, -this.velocity.x) - angle;
-                    const velocityMagnitude = Math.sqrt(this.velocity.x * this.velocity.x + this.velocity.y * this.velocity.y);
-                    const trailingEffect = 0.05 * velocityMagnitude * Math.cos(angleOffset);
-                    this.pointsDistance[i] -= trailingEffect;
-                    
-                    // Update point position
-                    this.points[i].x = this.x + Math.cos(angle) * this.pointsDistance[i];
-                    this.points[i].y = this.y + Math.sin(angle) * this.pointsDistance[i];
+                    this.points[i] = {
+                        x: this.x + Math.cos(angle) * this.radius,
+                        y: this.y + Math.sin(angle) * this.radius,
+                        distance: this.radius
+                    };
                 }
             }
 
