@@ -449,7 +449,7 @@
             mouseY = e.clientY;
         });
         
-        // Handle window resize
+        // Handle window resiz
         window.addEventListener('resize', () => {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
