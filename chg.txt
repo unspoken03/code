@@ -1,41 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Study App</title>
+  <style>
+    :root {
+      --bg-color: #1a1a1a;
+      --nav-color: #252525;
+      --text-color: #f0f0f0;
+      --accent-color: #6e6aff;
+      --border-color: #333333;
+      --card-color: #252525;
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+    
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .nav-bar {
+      background-color: var(--nav-color);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-around;
+      padding: 12px 0;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+    
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: var(--text-color);
+      opacity: 0.6;
+      transition: opacity 0.2s ease;
+      cursor: pointer;
+      padding: 5px 15px;
+      border-radius: 8px;
+      text-decoration: none;
+    }
+    
+    .nav-item.active {
+      opacity: 1;
+      color: var(--accent-color);
+    }
+    
+    .nav-item:hover {
+      opacity: 0.9;
+    }
+    
+    .nav-icon {
+      font-size: 24px;
+      margin-bottom: 4px;
+    }
+    
+    .nav-label {
+      font-size: 12px;
+      font-weight: 500;
+    }
+    
+    .content {
+      flex: 1;
+      padding: 20px;
+      display: none;
+    }
+    
+    .content.active {
+      display: block;
+    }
+    
+    h1 {
+      margin-bottom: 20px;
+      font-size: 24px;
+      font-weight: 600;
+    }
+    
+    p {
+      margin-bottom: 15px;
+      line-height: 1.6;
+    }
+    
+    .card {
+      background-color: var(--card-color);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      border: 1px solid var(--border-color);
+    }
+    
+    /* Notes section */
+    .note {
+      margin-bottom: 15px;
+    }
+    
+    .note h3 {
+      margin-bottom: 8px;
+    }
+    
+    /* Flashcards section */
+    .flashcard {
+      background-color: var(--card-color);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 15px;
+      cursor: pointer;
+      border: 1px solid var(--border-color);
+      position: relative;
+      height: 150px;
+      perspective: 1000px;
+    }
+    
+    .flashcard-inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      transition: transform 0.6s;
+      transform-style: preserve-3d;
+    }
+    
+    .flashcard.flipped .flashcard-inner {
+      transform: rotateY(180deg);
+    }
+    
+    .flashcard-front, .flashcard-back {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      backface-visibility: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+    
+    .flashcard-back {
+      transform: rotateY(180deg);
+    }
+    
+    /* Pomodoro section */
+    .timer-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 30px;
+    }
+    
+    .timer-display {
+      font-size: 60px;
+      font-weight: 300;
+      margin-bottom: 20px;
+    }
+    
+    .timer-controls {
+      display: flex;
+      gap: 15px;
+    }
+    
+    .timer-btn {
+      background-color: var(--accent-color);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    
+    .timer-btn:hover {
+      opacity: 0.9;
+    }
+    
+    /* Calendar section */
+    .calendar {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 10px;
+      margin-top: 20px;
+    }
+    
+    .calendar-header {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 10px;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+    
+    .calendar-day {
+      background-color: var(--card-color);
+      border-radius: 8px;
+      padding: 10px;
+      text-align: center;
+      border: 1px solid var(--border-color);
+    }
+    
+    .calendar-day.today {
+      border-color: var(--accent-color);
+      color: var(--accent-color);
+    }
+    
+    .calendar-day.has-event::after {
+      content: "";
+      display: block;
+      width: 6px;
+      height: 6px;
+      background-color: var(--accent-color);
+      border-radius: 50%;
+      margin: 5px auto 0;
+    }
+    
+    /* Settings section */
+    .setting-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+    
+    .setting-item:last-child {
+      border-bottom: none;
+    }
+    
+    .toggle {
+      position: relative;
+      display: inline-block;
+      width: 50px;
+      height: 24px;
+    }
+    
+    .toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #555;
+      transition: .4s;
+      border-radius: 24px;
+    }
+    
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 20px;
+      width: 20px;
+      left: 2px;
+      bottom: 2px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+    
+    input:checked + .slider {
+      background-color: var(--accent-color);
+    }
+    
+    input:checked + .slider:before {
+      transform: translateX(26px);
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav-bar">
+    <div class="nav-item active" data-tab="notes">
+      <div class="nav-icon">📝</div>
+      <div class="nav-label">Notes</div>
+    </div>
+    <div class="nav-item" data-tab="flashcards">
+      <div class="nav-icon">🗂️</div>
+      <div class="nav-label">Flashcards</div>
+    </div>
+    <div class="nav-item" data-tab="pomodoro">
+      <div class="nav-icon">⏱️</div>
+      <div class="nav-label">Pomodoro</div>
+    </div>
+    <div class="nav-item" data-tab="calendar">
+      <div class="nav-icon">📅</div>
+      <div class="nav-label">Calendar</div>
+    </div>
+    <div class="nav-item" data-tab="settings">
+      <div class="nav-icon">⚙️</div>
+      <div class="nav-label">Settings</div>
+    </div>
+  </nav>
+  
+  <div id="notes" class="content active">
+    <h1>Study Notes</h1>
+    <div class="card note">
+      <h3>Chapter 1: Introduction</h3>
+      <p>Key concepts from the introduction chapter include the fundamental principles and historical context of the subject. Remember to review the timeline on page 15.</p>
+    </div>
+    <div class="card note">
+      <h3>Chapter 2: Core Concepts</h3>
+      <p>The second chapter covers essential theoretical frameworks. Pay special attention to the models discussed in section 2.3 and their applications.</p>
+    </div>
+    <div class="card note">
+      <h3>Chapter 3: Advanced Topics</h3>
+      <p>This chapter builds on previous concepts and introduces more complex ideas. The case studies on pages 45-48 will likely appear on the exam.</p>
+    </div>
+  </div>
+  
+  <div id="flashcards" class="content">
+    <h1>Flashcards</h1>
+    <p>Click on a card to flip it and reveal the answer.</p>
+    
+    <div class="flashcard">
+      <div class="flashcard-inner">
+        <div class="flashcard-front">
+          What is the primary function of mitochondria?
+        </div>
+        <div class="flashcard-back">
+          Mitochondria are the powerhouse of the cell, responsible for generating energy in the form of ATP through cellular respiration.
+        </div>
+      </div>
+    </div>
+    
+    <div class="flashcard">
+      <div class="flashcard-inner">
+        <div class="flashcard-front">
+          Define Boyle's Law and its formula.
+        </div>
+        <div class="flashcard-back">
+          Boyle's Law states that the pressure of a gas is inversely proportional to its volume at constant temperature. Formula: P₁V₁ = P₂V₂
+        </div>
+      </div>
+    </div>
+    
+    <div class="flashcard">
+      <div class="flashcard-inner">
+        <div class="flashcard-front">
+          What year was the Treaty of Versailles signed?
+        </div>
+        <div class="flashcard-back">
+          The Treaty of Versailles was signed in 1919, formally ending World War I.
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div id="pomodoro" class="content">
+    <h1>Pomodoro Timer</h1>
+    <p>The Pomodoro Technique helps you focus by breaking work into intervals, traditionally 25 minutes in length, separated by short breaks.</p>
+    
+    <div class="timer-container">
+      <div class="timer-display">25:00</div>
+      <div class="timer-controls">
+        <button class="timer-btn" id="start-btn">Start</button>
+        <button class="timer-btn" id="pause-btn">Pause</button>
+        <button class="timer-btn" id="reset-btn">Reset</button>
+      </div>
+    </div>
+    
+    <div class="card" style="margin-top: 30px;">
+      <h3>Current Session</h3>
+      <p>Focus Session: 25 minutes</p>
+      <p>Break Time: 5 minutes</p>
+      <p>Sessions Completed: 0 / 4</p>
+    </div>
+  </div>
+  
+  <div id="calendar" class="content">
+    <h1>Study Calendar</h1>
+    <p>Track your study schedule and upcoming exams.</p>
+    
+    <div class="calendar-header">
+      <div>Sun</div>
+      <div>Mon</div>
+      <div>Tue</div>
+      <div>Wed</div>
+      <div>Thu</div>
+      <div>Fri</div>
+      <div>Sat</div>
+    </div>
+    
+    <div class="calendar">
+      <div class="calendar-day">1</div>
+      <div class="calendar-day">2</div>
+      <div class="calendar-day">3</div>
+      <div class="calendar-day">4</div>
+      <div class="calendar-day">5</div>
+      <div class="calendar-day">6</div>
+      <div class="calendar-day">7</div>
+      <div class="calendar-day has-event">8</div>
+      <div class="calendar-day today">9</div>
+      <div class="calendar-day">10</div>
+      <div class="calendar-day">11</div>
+      <div class="calendar-day has-event">12</div>
+      <div class="calendar-day">13</div>
+      <div class="calendar-day">14</div>
+      <div class="calendar-day">15</div>
+      <div class="calendar-day">16</div>
+      <div class="calendar-day">17</div>
+      <div class="calendar-day has-event">18</div>
+      <div class="calendar-day">19</div>
+      <div class="calendar-day">20</div>
+      <div class="calendar-day">21</div>
+    </div>
+    
+    <div class="card" style="margin-top: 20px;">
+      <h3>Upcoming Events</h3>
+      <p>April 8: Chemistry Quiz</p>
+      <p>April 12: Study Group Meeting</p>
+      <p>April 18: Final Exam</p>
+    </div>
+  </div>
+  
+  <div id="settings" class="content">
+    <h1>Settings</h1>
+    <div class="card">
+      <div class="setting-item">
+        <div>
+          <h3>Dark Mode</h3>
+          <p>Toggle dark/light theme</p>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+      
+      <div class="setting-item">
+        <div>
+          <h3>Notifications</h3>
+          <p>Enable study reminders</p>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+      
+      <div class="setting-item">
+        <div>
+          <h3>Focus Mode</h3>
+          <p>Hide distractions during study sessions</p>
+        </div>
+        <label class="toggle">
+          <input type="checkbox">
+          <span class="slider"></span>
+        </label>
+      </div>
+      
+      <div class="setting-item">
+        <div>
+          <h3>Pomodoro Settings</h3>
+          <p>Customize timer durations</p>
+        </div>
+        <div style="color: var(--accent-color);">Customize</div>
+      </div>
+    </div>
+  </div>
 
-⸻
-
-1. What happens to Old Major three nights after the meeting?
-He dies peacefully in his sleep.
-
-2. What is the effect of Old Major’s speech on the farm? What have they begun to plan?
-His speech inspires the animals to rebel against human oppression. They begin secretly planning a revolution.
-
-3. Which animals are considered the most intelligent on the farm? Who are the three stand-outs among them? Describe each of them. What have they done?
-The pigs are the most intelligent. The three stand-outs are:
-	•	Napoleon – Large and quiet, known for getting his way.
-	•	Snowball – More talkative and inventive.
-	•	Squealer – Persuasive and manipulative speaker.
-They start teaching Animalism and organizing the animals.
-
-4. What is “Animalism”? What ideology might it represent from Russian history? How do the other animals react to its principles?
-Animalism is the belief that all animals are equal and should govern themselves. It represents Communism. Some animals embrace it, while others are skeptical or confused (especially Mollie and Moses).
-
-5. Who is Moses, and what might he symbolize? Why is “Sugarcandy Mountain” a challenge for the pigs?
-Moses is a raven who tells tales of a paradise called Sugarcandy Mountain. He represents organized religion. The pigs oppose his stories because they distract the animals from the rebellion and imply that suffering is rewarded after death.
-
-6. Who are the two most faithful followers of Animalism? What are their similarities and differences?
-Boxer and Clover are the most loyal. Both are strong, hardworking horses. Boxer is more naive and follows slogans like “I will work harder,” while Clover is slightly more aware but still obedient.
-
-7. What has caused the Rebellion to come earlier than expected? What are the animals’ initial reactions? How do they celebrate?
-The animals are left unfed, so they break into the food storage. When Mr. Jones and his men try to stop them, the animals rebel and chase them off. They celebrate by destroying symbols of oppression and singing “Beasts of England.”
-
-8. What decision do the animals come to after entering the farmhouse the next morning? Why do they scold Mollie?
-They decide to preserve the farmhouse as a museum and not live there. Mollie is scolded for admiring herself in the mirror and trying on ribbons—signs of vanity and human influence.
-
-9. What news do the pigs reveal to the other animals in the barn? What positive and/or negative consequences might this bring for the animals in the future?
-The pigs reveal they’ve taught themselves to read and write and have condensed Animalism into the Seven Commandments. Positively, this gives structure. Negatively, it gives the pigs too much power.
-
-10. Identify the Seven Commandments. What is the irony of the seventh commandment?
-The Seven Commandments include rules like “No animal shall kill any other animal” and “All animals are equal.”
-The seventh commandment is: “All animals are equal.”
-The irony: Over time, the pigs alter it and break all the commandments, turning into the very tyrants they overthrew.
-
-11. What inference can be made as to what happened to the milk at the end of the chapter? What does this suggest about the power hierarchy on the farm?
-The milk disappears, and later it’s revealed that the pigs took it for themselves. This suggests that the pigs are already taking more power and privileges, hinting at a new oppressive leadership.
+  <script>
+    // Tab switching functionality
+    const navItems = document.querySelectorAll('.nav-item');
+    const contentTabs = document.querySelectorAll('.content');
+    
+    navItems.forEach(item => {
+      item.addEventListener('click', () => {
+        const tabId = item.getAttribute('data-tab');
+        
+        // Update active tab in navigation
+        navItems.forEach(navItem => navItem.classList.remove('active'));
+        item.classList.add('active');
+        
+        // Show the selected content
+        contentTabs.forEach(tab => tab.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+      });
+    });
+    
+    // Flashcard flip functionality
+    const flashcards = document.querySelectorAll('.flashcard');
+    
+    flashcards.forEach(card => {
+      card.addEventListener('click', () => {
+        card.classList.toggle('flipped');
+      });
+    });
+    
+    // Pomodoro timer functionality
+    let timerInterval;
+    let minutes = 25;
+    let seconds = 0;
+    let isRunning = false;
+    
+    const timerDisplay = document.querySelector('.timer-display');
+    const startBtn = document.getElementById('start-btn');
+    const pauseBtn = document.getElementById('pause-btn');
+    const resetBtn = document.getElementById('reset-btn');
+    
+    function updateTimerDisplay() {
+      timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }
+    
+    function startTimer() {
+      if (isRunning) return;
+      
+      isRunning = true;
+      timerInterval = setInterval(() => {
+        if (seconds > 0) {
+          seconds--;
+        } else if (minutes > 0) {
+          minutes--;
+          seconds = 59;
+        } else {
+          clearInterval(timerInterval);
+          isRunning = false;
+          alert('Time is up!');
+        }
+        updateTimerDisplay();
+      }, 1000);
+    }
+    
+    function pauseTimer() {
+      clearInterval(timerInterval);
+      isRunning = false;
+    }
+    
+    function resetTimer() {
+      clearInterval(timerInterval);
+      isRunning = false;
+      minutes = 25;
+      seconds = 0;
+      updateTimerDisplay();
+    }
+    
+    startBtn.addEventListener('click', startTimer);
+    pauseBtn.addEventListener('click', pauseTimer);
+    resetBtn.addEventListener('click', resetTimer);
+  </script>
+</body>
+</html>
