@@ -31,15 +31,27 @@
     
     .nav-bar {
       background-color: var(--nav-color);
-      border-bottom: 1px solid var(--border-color);
+      border: 1px solid var(--border-color);
       display: flex;
       justify-content: space-around;
       padding: 12px 0;
-      position: sticky;
-      top: 0;
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 90%;
+      max-width: 600px;
       z-index: 100;
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
+      border-radius: 9999px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+    
+    .nav-bar.hidden {
+      transform: translateX(-50%) translateY(-100px);
+      opacity: 0;
     }
     
     .nav-item {
@@ -286,17 +298,17 @@
 </head>
 <body>
   <nav class="nav-bar">
-    <div class="nav-item active" data-tab="notes">
+    <div class="nav-item" data-tab="home">
+      <div class="nav-icon">🏠</div>
+      <div class="nav-label">Home</div>
+    </div>
+    <div class="nav-item" data-tab="notes">
       <div class="nav-icon">📝</div>
       <div class="nav-label">Notes</div>
     </div>
     <div class="nav-item" data-tab="flashcards">
       <div class="nav-icon">🗂️</div>
       <div class="nav-label">Flashcards</div>
-    </div>
-    <div class="nav-item" data-tab="pomodoro">
-      <div class="nav-icon">⏱️</div>
-      <div class="nav-label">Pomodoro</div>
     </div>
     <div class="nav-item" data-tab="calendar">
       <div class="nav-icon">📅</div>
@@ -308,7 +320,7 @@
     </div>
   </nav>
   
-  <div id="notes" class="content active">
+  <div id="notes" class="content">
     <h1>Study Notes</h1>
     <div class="card note">
       <h3>Chapter 1: Introduction</h3>
@@ -362,24 +374,27 @@
     </div>
   </div>
   
-  <div id="pomodoro" class="content">
-    <h1>Pomodoro Timer</h1>
-    <p>The Pomodoro Technique helps you focus by breaking work into intervals, traditionally 25 minutes in length, separated by short breaks.</p>
+  <div id="home" class="content active">
+    <h1>Welcome to Study Helper</h1>
+    <p>Your minimalist companion for focused and organized studying.</p>
     
-    <div class="timer-container">
-      <div class="timer-display">25:00</div>
-      <div class="timer-controls">
-        <button class="timer-btn" id="start-btn">Start</button>
-        <button class="timer-btn" id="pause-btn">Pause</button>
-        <button class="timer-btn" id="reset-btn">Reset</button>
-      </div>
+    <div class="card">
+      <h3>About This App</h3>
+      <p>This study app features a clean, distraction-free dark theme interface designed to help you focus on your studies.</p>
+      <p>Use the navigation bar above to switch between different features:</p>
+      <ul style="padding-left: 20px; margin-bottom: 15px;">
+        <li style="margin-bottom: 8px;"><strong>Home</strong> - This dashboard with app info</li>
+        <li style="margin-bottom: 8px;"><strong>Notes</strong> - Store and organize your study notes</li>
+        <li style="margin-bottom: 8px;"><strong>Flashcards</strong> - Review with interactive flashcards</li>
+        <li style="margin-bottom: 8px;"><strong>Calendar</strong> - Track your study schedule</li>
+        <li style="margin-bottom: 8px;"><strong>Settings</strong> - Customize your experience</li>
+      </ul>
     </div>
     
-    <div class="card" style="margin-top: 30px;">
-      <h3>Current Session</h3>
-      <p>Focus Session: 25 minutes</p>
-      <p>Break Time: 5 minutes</p>
-      <p>Sessions Completed: 0 / 4</p>
+    <div class="card" style="margin-top: 20px;">
+      <h3>Get Started</h3>
+      <p>Start by exploring the different tabs. On pages other than Home, the navigation bar will hide when you're not using it, and reappear when you move your mouse to the top of the screen.</p>
+      <p>This creates a distraction-free environment when you're focused on studying.</p>
     </div>
   </div>
   
@@ -479,10 +494,48 @@
     // Tab switching functionality
     const navItems = document.querySelectorAll('.nav-item');
     const contentTabs = document.querySelectorAll('.content');
+    const navBar = document.querySelector('.nav-bar');
     
+    // Set Home as active by default
+    document.querySelector('[data-tab="home"]').classList.add('active');
+    
+    // Variable to track current tab
+    let currentTab = 'home';
+    
+    // Nav bar hide/show functionality
+    const showNavBar = () => {
+      navBar.classList.remove('hidden');
+    };
+    
+    const hideNavBar = () => {
+      if (currentTab !== 'home') {
+        navBar.classList.add('hidden');
+      }
+    };
+    
+    // Create detection area for mouse
+    const navDetectionArea = document.createElement('div');
+    navDetectionArea.style.position = 'fixed';
+    navDetectionArea.style.top = '0';
+    navDetectionArea.style.left = '0';
+    navDetectionArea.style.width = '100%';
+    navDetectionArea.style.height = '60px';
+    navDetectionArea.style.zIndex = '99';
+    document.body.appendChild(navDetectionArea);
+    
+    navDetectionArea.addEventListener('mouseenter', showNavBar);
+    document.addEventListener('mousemove', (e) => {
+      // If mouse is not near the top and not over the nav bar itself
+      if (e.clientY > 150 && !navBar.contains(e.target) && currentTab !== 'home') {
+        hideNavBar();
+      }
+    });
+    
+    // Tab switching
     navItems.forEach(item => {
       item.addEventListener('click', () => {
         const tabId = item.getAttribute('data-tab');
+        currentTab = tabId;
         
         // Update active tab in navigation
         navItems.forEach(navItem => navItem.classList.remove('active'));
@@ -491,6 +544,11 @@
         // Show the selected content
         contentTabs.forEach(tab => tab.classList.remove('active'));
         document.getElementById(tabId).classList.add('active');
+        
+        // Always show nav on home, maybe hide on others
+        if (tabId === 'home') {
+          showNavBar();
+        }
       });
     });
     
@@ -502,57 +560,6 @@
         card.classList.toggle('flipped');
       });
     });
-    
-    // Pomodoro timer functionality
-    let timerInterval;
-    let minutes = 25;
-    let seconds = 0;
-    let isRunning = false;
-    
-    const timerDisplay = document.querySelector('.timer-display');
-    const startBtn = document.getElementById('start-btn');
-    const pauseBtn = document.getElementById('pause-btn');
-    const resetBtn = document.getElementById('reset-btn');
-    
-    function updateTimerDisplay() {
-      timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-    }
-    
-    function startTimer() {
-      if (isRunning) return;
-      
-      isRunning = true;
-      timerInterval = setInterval(() => {
-        if (seconds > 0) {
-          seconds--;
-        } else if (minutes > 0) {
-          minutes--;
-          seconds = 59;
-        } else {
-          clearInterval(timerInterval);
-          isRunning = false;
-          alert('Time is up!');
-        }
-        updateTimerDisplay();
-      }, 1000);
-    }
-    
-    function pauseTimer() {
-      clearInterval(timerInterval);
-      isRunning = false;
-    }
-    
-    function resetTimer() {
-      clearInterval(timerInterval);
-      isRunning = false;
-      minutes = 25;
-      seconds = 0;
-      updateTimerDisplay();
-    }
-    
-    startBtn.addEventListener('click', startTimer);
-    pauseBtn.addEventListener('click', pauseTimer);
-    resetBtn.addEventListener('click', resetTimer);
   </script>
 </body>
 </html>
