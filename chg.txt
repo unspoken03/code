@@ -39,14 +39,16 @@
       top: 20px;
       left: 50%;
       transform: translateX(-50%);
-      width: 90%;
-      max-width: 600px;
+      width: 1600px;
+      height: 120px;
+      max-width: 95%;
       z-index: 100;
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
       border-radius: 9999px;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
       transition: transform 0.3s ease, opacity 0.3s ease;
+      align-items: center;
     }
     
     .nav-bar.hidden {
@@ -82,7 +84,7 @@
     }
     
     .nav-label {
-      font-size: 12px;
+      font-size: 18px;
       font-weight: 500;
     }
     
@@ -299,23 +301,18 @@
 <body>
   <nav class="nav-bar">
     <div class="nav-item" data-tab="home">
-      <div class="nav-icon">🏠</div>
       <div class="nav-label">Home</div>
     </div>
     <div class="nav-item" data-tab="notes">
-      <div class="nav-icon">📝</div>
       <div class="nav-label">Notes</div>
     </div>
     <div class="nav-item" data-tab="flashcards">
-      <div class="nav-icon">🗂️</div>
       <div class="nav-label">Flashcards</div>
     </div>
     <div class="nav-item" data-tab="calendar">
-      <div class="nav-icon">📅</div>
       <div class="nav-label">Calendar</div>
     </div>
     <div class="nav-item" data-tab="settings">
-      <div class="nav-icon">⚙️</div>
       <div class="nav-label">Settings</div>
     </div>
   </nav>
@@ -375,26 +372,35 @@
   </div>
   
   <div id="home" class="content active">
-    <h1>Welcome to Study Helper</h1>
-    <p>Your minimalist companion for focused and organized studying.</p>
+    <h1 style="text-align: center; margin-top: 40px; margin-bottom: 30px; font-size: 32px;">Welcome to Study Helper</h1>
+    <p style="text-align: center; margin-bottom: 40px; font-size: 18px;">Your minimalist companion for focused and organized studying.</p>
     
     <div class="card">
       <h3>About This App</h3>
-      <p>This study app features a clean, distraction-free dark theme interface designed to help you focus on your studies.</p>
-      <p>Use the navigation bar above to switch between different features:</p>
+      <p>This study app features a clean, distraction-free dark theme interface designed to help you focus on your academic goals while minimizing visual clutter and distractions. The sleek design emphasizes content over interface elements, allowing you to concentrate on what matters most - your studies.</p>
+      <p>The floating navigation bar at the top provides quick access to all features while staying out of your way when you're deep in study mode. It automatically hides when not needed and smoothly reappears when you move your cursor to the top of the screen.</p>
+      <p>Use the navigation bar to switch between different features:</p>
       <ul style="padding-left: 20px; margin-bottom: 15px;">
-        <li style="margin-bottom: 8px;"><strong>Home</strong> - This dashboard with app info</li>
-        <li style="margin-bottom: 8px;"><strong>Notes</strong> - Store and organize your study notes</li>
-        <li style="margin-bottom: 8px;"><strong>Flashcards</strong> - Review with interactive flashcards</li>
-        <li style="margin-bottom: 8px;"><strong>Calendar</strong> - Track your study schedule</li>
-        <li style="margin-bottom: 8px;"><strong>Settings</strong> - Customize your experience</li>
+        <li style="margin-bottom: 12px;"><strong>Home</strong> - This dashboard with app information and quick access to all features</li>
+        <li style="margin-bottom: 12px;"><strong>Notes</strong> - Store and organize your study notes by chapter, topic, or subject</li>
+        <li style="margin-bottom: 12px;"><strong>Flashcards</strong> - Create and review interactive flashcards to test your knowledge</li>
+        <li style="margin-bottom: 12px;"><strong>Calendar</strong> - Track your study schedule, deadlines, and upcoming exams</li>
+        <li style="margin-bottom: 12px;"><strong>Settings</strong> - Customize your experience with various options and preferences</li>
       </ul>
     </div>
     
     <div class="card" style="margin-top: 20px;">
       <h3>Get Started</h3>
-      <p>Start by exploring the different tabs. On pages other than Home, the navigation bar will hide when you're not using it, and reappear when you move your mouse to the top of the screen.</p>
-      <p>This creates a distraction-free environment when you're focused on studying.</p>
+      <p>Start by exploring the different tabs accessible from the navigation bar above. Each section is designed to help with a specific aspect of your study routine, combining simplicity with functionality.</p>
+      <p>When you navigate away from the Home page, the navigation bar will automatically hide when you're not using it, creating a completely distraction-free environment. Simply move your mouse to the top of the screen whenever you want to navigate to a different section, and the bar will smoothly reappear.</p>
+      <p>The clean dark theme is easy on the eyes during long study sessions, with carefully chosen contrast levels to reduce eye strain while maintaining readability. All elements of the interface are designed with focus and productivity in mind.</p>
+    </div>
+    
+    <div class="card" style="margin-top: 20px;">
+      <h3>Study Smart</h3>
+      <p>Remember that effective studying isn't just about the time spent, but how you organize that time. Use this app to structure your study sessions, track your progress, and test your knowledge retention through various methods.</p>
+      <p>The Notes section allows you to capture key concepts from your readings or lectures, while Flashcards help reinforce your memory through active recall. The Calendar helps you stay on track with upcoming deadlines and manage your time effectively.</p>
+      <p>We've designed this tool to adapt to your study style while encouraging proven learning techniques that maximize knowledge retention and understanding.</p>
     </div>
   </div>
   
@@ -519,7 +525,7 @@
     navDetectionArea.style.top = '0';
     navDetectionArea.style.left = '0';
     navDetectionArea.style.width = '100%';
-    navDetectionArea.style.height = '60px';
+    navDetectionArea.style.height = '80px';
     navDetectionArea.style.zIndex = '99';
     document.body.appendChild(navDetectionArea);
     
