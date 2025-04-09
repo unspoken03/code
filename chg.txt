@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Study App</title>
+  <title>Study Site</title>
   <style>
     :root {
       --bg-color: #1a1a1a;
@@ -27,20 +27,21 @@
       min-height: 100vh;
       display: flex;
       flex-direction: column;
+      padding-top: 80px;
     }
     
     .nav-bar {
       background-color: var(--nav-color);
       border: 1px solid var(--border-color);
       display: flex;
-      justify-content: space-around;
-      padding: 12px 0;
+      justify-content: space-between;
+      padding: 0 30px;
       position: fixed;
       top: 20px;
       left: 50%;
       transform: translateX(-50%);
-      width: 1600px;
-      height: 120px;
+      width: 700px;
+      height: 50px;
       max-width: 95%;
       z-index: 100;
       backdrop-filter: blur(10px);
@@ -58,14 +59,14 @@
     
     .nav-item {
       display: flex;
-      flex-direction: column;
       align-items: center;
+      justify-content: center;
       color: var(--text-color);
       opacity: 0.6;
-      transition: opacity 0.2s ease;
+      transition: opacity 0.2s ease, color 0.2s ease;
       cursor: pointer;
-      padding: 5px 15px;
-      border-radius: 8px;
+      padding: 0 10px;
+      height: 100%;
       text-decoration: none;
     }
     
@@ -78,13 +79,8 @@
       opacity: 0.9;
     }
     
-    .nav-icon {
-      font-size: 24px;
-      margin-bottom: 4px;
-    }
-    
     .nav-label {
-      font-size: 18px;
+      font-size: 19px;
       font-weight: 500;
     }
     
@@ -92,10 +88,15 @@
       flex: 1;
       padding: 20px;
       display: none;
+      flex-direction: column;
+      align-items: stretch;
+      max-width: 1000px;
+      margin: 0 auto;
+      width: 100%;
     }
     
     .content.active {
-      display: block;
+      display: flex;
     }
     
     h1 {
@@ -115,186 +116,241 @@
       padding: 20px;
       margin-bottom: 20px;
       border: 1px solid var(--border-color);
-    }
-    
-    /* Notes section */
-    .note {
-      margin-bottom: 15px;
-    }
-    
-    .note h3 {
-      margin-bottom: 8px;
-    }
-    
-    /* Flashcards section */
-    .flashcard {
-      background-color: var(--card-color);
-      border-radius: 12px;
-      padding: 20px;
-      margin-bottom: 15px;
-      cursor: pointer;
-      border: 1px solid var(--border-color);
-      position: relative;
-      height: 150px;
-      perspective: 1000px;
-    }
-    
-    .flashcard-inner {
-      position: relative;
-      width: 100%;
-      height: 100%;
-      transition: transform 0.6s;
-      transform-style: preserve-3d;
-    }
-    
-    .flashcard.flipped .flashcard-inner {
-      transform: rotateY(180deg);
-    }
-    
-    .flashcard-front, .flashcard-back {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      backface-visibility: hidden;
       display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 18px;
+      flex-direction: column;
     }
     
-    .flashcard-back {
-      transform: rotateY(180deg);
-    }
-    
-    /* Pomodoro section */
-    .timer-container {
+    .center-content {
       display: flex;
       flex-direction: column;
       align-items: center;
-      margin-top: 30px;
+      justify-content: center;
+      text-align: center;
+      margin-bottom: 30px;
     }
     
-    .timer-display {
-      font-size: 60px;
-      font-weight: 300;
+    /* Add button style */
+    .add-button {
+      width: 50px;
+      height: 50px;
+      background-color: var(--accent-color);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 30px;
+      color: white;
+      cursor: pointer;
+      margin: 0 auto 20px auto;
+      transition: all 0.2s ease;
+      border: none;
+      outline: none;
+    }
+    
+    .add-button:hover {
+      opacity: 0.9;
+      transform: scale(1.05);
+    }
+    
+    /* Document container styles */
+    .docs-container {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      gap: 20px;
+    }
+    
+    .doc-item {
+      background-color: var(--card-color);
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .doc-title {
+      font-size: 18px;
+      font-weight: 600;
+      padding: 15px;
+      border-bottom: 1px solid var(--border-color);
+      background-color: rgba(110, 106, 255, 0.1);
+    }
+    
+    .doc-content {
+      padding: 15px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    
+    /* File input style */
+    .file-input-container {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      background-color: var(--card-color);
+      border-radius: 12px;
+      padding: 20px;
+      border: 1px solid var(--border-color);
       margin-bottom: 20px;
     }
     
-    .timer-controls {
+    .file-input-container.active {
       display: flex;
-      gap: 15px;
     }
     
-    .timer-btn {
+    .file-input-header {
+      margin-bottom: 15px;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    
+    .file-input-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 15px;
+      width: 100%;
+    }
+    
+    /* Custom file input styling */
+    .custom-file-input {
+      position: relative;
+      display: inline-block;
+      width: 100%;
+    }
+    
+    .custom-file-input input[type="file"] {
+      position: absolute;
+      left: -9999px;
+      opacity: 0;
+      width: 0.1px;
+      height: 0.1px;
+    }
+    
+    .custom-file-input label {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 15px;
+      background-color: var(--nav-color);
+      color: var(--text-color);
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      cursor: pointer;
+      width: 100%;
+      transition: all 0.2s ease;
+      font-weight: normal;
+    }
+    
+    .custom-file-input label:hover {
+      background-color: #333;
+    }
+    
+    .custom-file-input span {
+      margin-left: 8px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .custom-file-input label::before {
+      content: "Choose File";
+      font-weight: 500;
+    }
+    
+    .import-btn {
+      padding: 10px 20px;
       background-color: var(--accent-color);
       color: white;
       border: none;
-      padding: 10px 20px;
       border-radius: 8px;
-      font-size: 16px;
       cursor: pointer;
-      transition: opacity 0.2s;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      width: 100%;
     }
     
-    .timer-btn:hover {
+    .import-btn:hover {
       opacity: 0.9;
     }
     
-    /* Calendar section */
-    .calendar {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap: 10px;
-      margin-top: 20px;
+    /* Scrollbar styling */
+    ::-webkit-scrollbar {
+      width: 8px;
     }
     
-    .calendar-header {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap: 10px;
-      margin-bottom: 10px;
-      text-align: center;
-    }
-    
-    .calendar-day {
-      background-color: var(--card-color);
+    ::-webkit-scrollbar-track {
+      background: var(--bg-color);
       border-radius: 8px;
-      padding: 10px;
-      text-align: center;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: var(--accent-color);
+      border-radius: 8px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+      background: #5652d6;
+    }
+    
+    /* Loading indicator */
+    .loading-indicator {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 15px;
+      color: var(--text-color);
+    }
+    
+    /* Document content styling for DOCX conversion */
+    .doc-content {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+      line-height: 1.5;
+    }
+    
+    .doc-content h1, 
+    .doc-content h2, 
+    .doc-content h3, 
+    .doc-content h4, 
+    .doc-content h5, 
+    .doc-content h6 {
+      margin-top: 1em;
+      margin-bottom: 0.5em;
+      color: var(--text-color);
+    }
+    
+    .doc-content p {
+      margin-bottom: 1em;
+    }
+    
+    .doc-content ul, 
+    .doc-content ol {
+      margin-bottom: 1em;
+      padding-left: 2em;
+    }
+    
+    .doc-content table {
+      border-collapse: collapse;
+      margin-bottom: 1em;
+      width: 100%;
+    }
+    
+    .doc-content table, 
+    .doc-content th, 
+    .doc-content td {
       border: 1px solid var(--border-color);
     }
     
-    .calendar-day.today {
-      border-color: var(--accent-color);
-      color: var(--accent-color);
+    .doc-content th, 
+    .doc-content td {
+      padding: 0.5em;
+      text-align: left;
     }
     
-    .calendar-day.has-event::after {
-      content: "";
-      display: block;
-      width: 6px;
-      height: 6px;
-      background-color: var(--accent-color);
-      border-radius: 50%;
-      margin: 5px auto 0;
-    }
-    
-    /* Settings section */
-    .setting-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 15px 0;
-      border-bottom: 1px solid var(--border-color);
-    }
-    
-    .setting-item:last-child {
-      border-bottom: none;
-    }
-    
-    .toggle {
-      position: relative;
-      display: inline-block;
-      width: 50px;
-      height: 24px;
-    }
-    
-    .toggle input {
-      opacity: 0;
-      width: 0;
-      height: 0;
-    }
-    
-    .slider {
-      position: absolute;
-      cursor: pointer;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background-color: #555;
-      transition: .4s;
-      border-radius: 24px;
-    }
-    
-    .slider:before {
-      position: absolute;
-      content: "";
-      height: 20px;
-      width: 20px;
-      left: 2px;
-      bottom: 2px;
-      background-color: white;
-      transition: .4s;
-      border-radius: 50%;
-    }
-    
-    input:checked + .slider {
-      background-color: var(--accent-color);
-    }
-    
-    input:checked + .slider:before {
-      transform: translateX(26px);
+    .doc-content img {
+      max-width: 100%;
+      height: auto;
     }
   </style>
 </head>
@@ -304,198 +360,88 @@
       <div class="nav-label">Home</div>
     </div>
     <div class="nav-item" data-tab="notes">
-      <div class="nav-label">Notes</div>
+      <div class="nav-label">Answers</div>
     </div>
     <div class="nav-item" data-tab="flashcards">
-      <div class="nav-label">Flashcards</div>
+      <div class="nav-label">AI</div>
     </div>
     <div class="nav-item" data-tab="calendar">
-      <div class="nav-label">Calendar</div>
+      <div class="nav-label">Games sites</div>
     </div>
     <div class="nav-item" data-tab="settings">
-      <div class="nav-label">Settings</div>
+      <div class="nav-label">ChatRoom</div>
     </div>
   </nav>
   
+  <div id="home" class="content active">
+    <div class="center-content">
+      <h1 style="text-align: center; margin-top: 40px; margin-bottom: 30px; font-size: 50px;">vnbvnbvbnvnbv</h1>
+      <p style="text-align: center; margin-bottom: 40px; font-size: 18px;">dfsdfsdf</p>
+    </div>
+    
+    <div class="card">
+      <h3>About:</h3>
+      <p>This site is for a specific group of people, who decided that school is stupid and that kids need a little happiness in school.</p>
+      <div style="display: flex; flex-direction: column; padding-left: 20px; margin-bottom: 15px;">
+        <div style="margin-bottom: 12px;"><strong>Home Tab</strong> - This dashboard with app information and quick access to everything</div>
+        <div style="margin-bottom: 12px;"><strong>Answers Tab</strong> - The answers for Ms.Prezants class</div>
+        <div style="margin-bottom: 12px;"><strong>AI Tab</strong> - All AI sites added and it own chatgpt</div>
+        <div style="margin-bottom: 12px;"><strong>Game Sites Tab</strong> - The name explains it all</div>
+        <div style="margin-bottom: 12px;"><strong>ChatRoom Tab</strong> - The fully hidden chatroom where all the members can chat</div>
+      </div>
+    </div>
+    
+    <div class="card" style="margin-top: 20px;">
+      <h3>Security:</h3>
+      <p>This site was designed for safety by the most awesome person ever and also the creator of this site.</p>
+      <p>The site is supposted to block goguardian, be fully anonymous to the school, and give the users the best expirience ever!!</p>
+      <p>It comes with AI, No more risks of being caught on your phone by the teachers because this site has built in AI.</p>
+    </div>
+  </div>
+  
   <div id="notes" class="content">
-    <h1>Study Notes</h1>
-    <div class="card note">
-      <h3>Chapter 1: Introduction</h3>
-      <p>Key concepts from the introduction chapter include the fundamental principles and historical context of the subject. Remember to review the timeline on page 15.</p>
+    <h1>Answers</h1>
+    <p>Import your answer documents from Google Drive below.</p>
+    
+    <button class="add-button" id="addButton">+</button>
+    
+    <div class="file-input-container" id="fileInputContainer">
+      <div class="file-input-header">Import Document</div>
+      <div class="file-input-wrapper">
+        <div class="custom-file-input">
+          <input type="file" id="docxFile" accept=".docx">
+          <label for="docxFile">
+            <span id="file-name">No file selected</span>
+          </label>
+        </div>
+        <button class="import-btn" id="importBtn">Import Document</button>
+      </div>
+      <p style="margin-top: 15px; font-size: 14px; opacity: 0.7;">You can download answers from Google Drive and import them here.</p>
     </div>
-    <div class="card note">
-      <h3>Chapter 2: Core Concepts</h3>
-      <p>The second chapter covers essential theoretical frameworks. Pay special attention to the models discussed in section 2.3 and their applications.</p>
-    </div>
-    <div class="card note">
-      <h3>Chapter 3: Advanced Topics</h3>
-      <p>This chapter builds on previous concepts and introduces more complex ideas. The case studies on pages 45-48 will likely appear on the exam.</p>
+    
+    <div class="docs-container" id="docsContainer">
+      <!-- Documents will be added here -->
     </div>
   </div>
   
   <div id="flashcards" class="content">
-    <h1>Flashcards</h1>
-    <p>Click on a card to flip it and reveal the answer.</p>
-    
-    <div class="flashcard">
-      <div class="flashcard-inner">
-        <div class="flashcard-front">
-          What is the primary function of mitochondria?
-        </div>
-        <div class="flashcard-back">
-          Mitochondria are the powerhouse of the cell, responsible for generating energy in the form of ATP through cellular respiration.
-        </div>
-      </div>
-    </div>
-    
-    <div class="flashcard">
-      <div class="flashcard-inner">
-        <div class="flashcard-front">
-          Define Boyle's Law and its formula.
-        </div>
-        <div class="flashcard-back">
-          Boyle's Law states that the pressure of a gas is inversely proportional to its volume at constant temperature. Formula: P₁V₁ = P₂V₂
-        </div>
-      </div>
-    </div>
-    
-    <div class="flashcard">
-      <div class="flashcard-inner">
-        <div class="flashcard-front">
-          What year was the Treaty of Versailles signed?
-        </div>
-        <div class="flashcard-back">
-          The Treaty of Versailles was signed in 1919, formally ending World War I.
-        </div>
-      </div>
-    </div>
-  </div>
-  
-  <div id="home" class="content active">
-    <h1 style="text-align: center; margin-top: 40px; margin-bottom: 30px; font-size: 32px;">Welcome to Study Helper</h1>
-    <p style="text-align: center; margin-bottom: 40px; font-size: 18px;">Your minimalist companion for focused and organized studying.</p>
-    
-    <div class="card">
-      <h3>About This App</h3>
-      <p>This study app features a clean, distraction-free dark theme interface designed to help you focus on your academic goals while minimizing visual clutter and distractions. The sleek design emphasizes content over interface elements, allowing you to concentrate on what matters most - your studies.</p>
-      <p>The floating navigation bar at the top provides quick access to all features while staying out of your way when you're deep in study mode. It automatically hides when not needed and smoothly reappears when you move your cursor to the top of the screen.</p>
-      <p>Use the navigation bar to switch between different features:</p>
-      <ul style="padding-left: 20px; margin-bottom: 15px;">
-        <li style="margin-bottom: 12px;"><strong>Home</strong> - This dashboard with app information and quick access to all features</li>
-        <li style="margin-bottom: 12px;"><strong>Notes</strong> - Store and organize your study notes by chapter, topic, or subject</li>
-        <li style="margin-bottom: 12px;"><strong>Flashcards</strong> - Create and review interactive flashcards to test your knowledge</li>
-        <li style="margin-bottom: 12px;"><strong>Calendar</strong> - Track your study schedule, deadlines, and upcoming exams</li>
-        <li style="margin-bottom: 12px;"><strong>Settings</strong> - Customize your experience with various options and preferences</li>
-      </ul>
-    </div>
-    
-    <div class="card" style="margin-top: 20px;">
-      <h3>Get Started</h3>
-      <p>Start by exploring the different tabs accessible from the navigation bar above. Each section is designed to help with a specific aspect of your study routine, combining simplicity with functionality.</p>
-      <p>When you navigate away from the Home page, the navigation bar will automatically hide when you're not using it, creating a completely distraction-free environment. Simply move your mouse to the top of the screen whenever you want to navigate to a different section, and the bar will smoothly reappear.</p>
-      <p>The clean dark theme is easy on the eyes during long study sessions, with carefully chosen contrast levels to reduce eye strain while maintaining readability. All elements of the interface are designed with focus and productivity in mind.</p>
-    </div>
-    
-    <div class="card" style="margin-top: 20px;">
-      <h3>Study Smart</h3>
-      <p>Remember that effective studying isn't just about the time spent, but how you organize that time. Use this app to structure your study sessions, track your progress, and test your knowledge retention through various methods.</p>
-      <p>The Notes section allows you to capture key concepts from your readings or lectures, while Flashcards help reinforce your memory through active recall. The Calendar helps you stay on track with upcoming deadlines and manage your time effectively.</p>
-      <p>We've designed this tool to adapt to your study style while encouraging proven learning techniques that maximize knowledge retention and understanding.</p>
-    </div>
+    <h1>AI</h1>
+    <p>AI tools will appear here.</p>
   </div>
   
   <div id="calendar" class="content">
-    <h1>Study Calendar</h1>
-    <p>Track your study schedule and upcoming exams.</p>
-    
-    <div class="calendar-header">
-      <div>Sun</div>
-      <div>Mon</div>
-      <div>Tue</div>
-      <div>Wed</div>
-      <div>Thu</div>
-      <div>Fri</div>
-      <div>Sat</div>
-    </div>
-    
-    <div class="calendar">
-      <div class="calendar-day">1</div>
-      <div class="calendar-day">2</div>
-      <div class="calendar-day">3</div>
-      <div class="calendar-day">4</div>
-      <div class="calendar-day">5</div>
-      <div class="calendar-day">6</div>
-      <div class="calendar-day">7</div>
-      <div class="calendar-day has-event">8</div>
-      <div class="calendar-day today">9</div>
-      <div class="calendar-day">10</div>
-      <div class="calendar-day">11</div>
-      <div class="calendar-day has-event">12</div>
-      <div class="calendar-day">13</div>
-      <div class="calendar-day">14</div>
-      <div class="calendar-day">15</div>
-      <div class="calendar-day">16</div>
-      <div class="calendar-day">17</div>
-      <div class="calendar-day has-event">18</div>
-      <div class="calendar-day">19</div>
-      <div class="calendar-day">20</div>
-      <div class="calendar-day">21</div>
-    </div>
-    
-    <div class="card" style="margin-top: 20px;">
-      <h3>Upcoming Events</h3>
-      <p>April 8: Chemistry Quiz</p>
-      <p>April 12: Study Group Meeting</p>
-      <p>April 18: Final Exam</p>
-    </div>
+    <h1>Game Sites</h1>
+    <p>Game sites will appear here.</p>
   </div>
   
   <div id="settings" class="content">
-    <h1>Settings</h1>
-    <div class="card">
-      <div class="setting-item">
-        <div>
-          <h3>Dark Mode</h3>
-          <p>Toggle dark/light theme</p>
-        </div>
-        <label class="toggle">
-          <input type="checkbox" checked>
-          <span class="slider"></span>
-        </label>
-      </div>
-      
-      <div class="setting-item">
-        <div>
-          <h3>Notifications</h3>
-          <p>Enable study reminders</p>
-        </div>
-        <label class="toggle">
-          <input type="checkbox" checked>
-          <span class="slider"></span>
-        </label>
-      </div>
-      
-      <div class="setting-item">
-        <div>
-          <h3>Focus Mode</h3>
-          <p>Hide distractions during study sessions</p>
-        </div>
-        <label class="toggle">
-          <input type="checkbox">
-          <span class="slider"></span>
-        </label>
-      </div>
-      
-      <div class="setting-item">
-        <div>
-          <h3>Pomodoro Settings</h3>
-          <p>Customize timer durations</p>
-        </div>
-        <div style="color: var(--accent-color);">Customize</div>
-      </div>
-    </div>
+    <h1>ChatRoom</h1>
+    <p>Chat room will appear here.</p>
   </div>
 
+  <!-- Include mammoth.js library for DOCX parsing -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.0/mammoth.browser.min.js"></script>
+  
   <script>
     // Tab switching functionality
     const navItems = document.querySelectorAll('.nav-item');
@@ -525,7 +471,7 @@
     navDetectionArea.style.top = '0';
     navDetectionArea.style.left = '0';
     navDetectionArea.style.width = '100%';
-    navDetectionArea.style.height = '80px';
+    navDetectionArea.style.height = '100px';
     navDetectionArea.style.zIndex = '99';
     document.body.appendChild(navDetectionArea);
     
@@ -558,14 +504,116 @@
       });
     });
     
-    // Flashcard flip functionality
-    const flashcards = document.querySelectorAll('.flashcard');
+    // Document import functionality
+    const addButton = document.getElementById('addButton');
+    const fileInputContainer = document.getElementById('fileInputContainer');
+    const importBtn = document.getElementById('importBtn');
+    const docxFileInput = document.getElementById('docxFile');
+    const fileNameDisplay = document.getElementById('file-name');
+    const docsContainer = document.getElementById('docsContainer');
     
-    flashcards.forEach(card => {
-      card.addEventListener('click', () => {
-        card.classList.toggle('flipped');
-      });
+    // Update file name display when file is selected
+    docxFileInput.addEventListener('change', function() {
+      if (this.files.length > 0) {
+        fileNameDisplay.textContent = this.files[0].name;
+      } else {
+        fileNameDisplay.textContent = 'No file selected';
+      }
     });
+    
+    // Toggle file input container
+    addButton.addEventListener('click', () => {
+      // First open Google Drive in a new tab
+      window.open('https://drive.google.com', '_blank');
+      
+      // Show the file input container
+      fileInputContainer.classList.toggle('active');
+    });
+    
+    // Handle document import using mammoth.js
+    importBtn.addEventListener('click', () => {
+      const file = docxFileInput.files[0];
+      if (!file) {
+        alert('Please select a document file first.');
+        return;
+      }
+      
+      if (file.name.split('.').pop().toLowerCase() !== 'docx') {
+        alert('Please select a .docx file.');
+        return;
+      }
+      
+      // Create a loading indicator
+      const loadingElement = document.createElement('div');
+      loadingElement.textContent = 'Converting document...';
+      loadingElement.style.padding = '10px';
+      loadingElement.style.textAlign = 'center';
+      fileInputContainer.appendChild(loadingElement);
+      
+      // Create a document element
+      const docElement = document.createElement('div');
+      docElement.className = 'doc-item';
+      
+      // Create title element (use filename without extension)
+      const titleElement = document.createElement('div');
+      titleElement.className = 'doc-title';
+      titleElement.textContent = file.name.replace(/\.docx$/i, '');
+      
+      // Create content container
+      const contentElement = document.createElement('div');
+      contentElement.className = 'doc-content';
+      
+      // Use mammoth.js to convert the DOCX to HTML
+      const reader = new FileReader();
+      reader.onload = function(loadEvent) {
+        const arrayBuffer = loadEvent.target.result;
+        
+        mammoth.convertToHtml({arrayBuffer: arrayBuffer})
+          .then(function(result) {
+            // Add styling to the converted content
+            contentElement.innerHTML = result.value;
+            
+            // Add elements to the document container
+            docElement.appendChild(titleElement);
+            docElement.appendChild(contentElement);
+            
+            // Add the document to the container
+            docsContainer.appendChild(docElement);
+            
+            // Reset file input and hide the container
+            docxFileInput.value = '';
+            fileInputContainer.removeChild(loadingElement);
+            fileInputContainer.classList.remove('active');
+            
+            // Log any warnings
+            if (result.messages.length > 0) {
+              console.log("Warnings when converting DOCX document:");
+              console.log(result.messages);
+            }
+          })
+          .catch(function(error) {
+            console.error(error);
+            alert('Error parsing document: ' + error.message);
+            fileInputContainer.removeChild(loadingElement);
+          });
+      };
+      
+      reader.onerror = function() {
+        alert('Error reading the file');
+        fileInputContainer.removeChild(loadingElement);
+      };
+      
+      reader.readAsArrayBuffer(file);
+    });
+    
+    // Add a "loading" class to indicate the document is being parsed
+    function addLoadingClass(element) {
+      element.classList.add('loading');
+    }
+    
+    function removeLoadingClass(element) {
+      element.classList.remove('loading');
+    }
   </script>
 </body>
 </html>
