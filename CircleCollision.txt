@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Circle Collision Detection</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-family: Arial, sans-serif;
+    }
+    canvas {
+      border: 1px solid #000;
+      margin-top: 20px;
+    }
+    .controls {
+      margin-top: 10px;
+      padding: 10px;
+      background-color: #f0f0f0;
+      border-radius: 5px;
+    }
+    .description {
+      margin-top: 10px;
+      max-width: 600px;
+      text-align: left;
+    }
+  </style>
+</head>
+<body>
+  <h2>Circle Collision Demo</h2>
+  <div class="controls">
+    <button id="resetBtn">Reset Positions</button>
+    <label>Circle 1 Speed: <input type="range" id="speed1" min="1" max="10" value="5"></label>
+    <label>Circle 2 Speed: <input type="range" id="speed2" min="1" max="10" value="5"></label>
+  </div>
+  <canvas id="canvas" width="600" height="400"></canvas>
+  <div class="description">
+    <p>You can move the red circle with your mouse. The blue circle moves automatically. Watch them bounce off each other when they collide!</p>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const resetBtn = document.getElementById('resetBtn');
+    const speed1Slider = document.getElementById('speed1');
+    const speed2Slider = document.getElementById('speed2');
+
+    // Circle 1 (controlled by mouse)
+    let circle1 = {
+      x: 150,
+      y: 200,
+      radius: 30,
+      color: 'red',
+      vx: 0,
+      vy: 0,
+      mass: 2
+    };
+
+    // Circle 2 (moves automatically)
+    let circle2 = {
+      x: 450,
+      y: 200,
+      radius: 40,
+      color: 'blue',
+      vx: -2,
+      vy: 1,
+      mass: 3
+    };
+
+    // Track mouse position
+    let mouseX = 0;
+    let mouseY = 0;
+    let isMouseDown = false;
+
+    // Add event listeners
+    canvas.addEventListener('mousemove', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      mouseX = e.clientX - rect.left;
+      mouseY = e.clientY - rect.top;
+    });
+
+    canvas.addEventListener('mousedown', () => {
+      isMouseDown = true;
+    });
+
+    canvas.addEventListener('mouseup', () => {
+      isMouseDown = false;
+    });
+
+    resetBtn.addEventListener('click', resetPositions);
+
+    function resetPositions() {
+      // Reset circle positions
+      circle1.x = 150;
+      circle1.y = 200;
+      circle1.vx = 0;
+      circle1.vy = 0;
+      
+      circle2.x = 450;
+      circle2.y = 200;
+      circle2.vx = -2;
+      circle2.vy = 1;
+    }
+
+    function drawCircle(circle) {
+      ctx.beginPath();
+      ctx.arc(circle.x, circle.y, circle.radius, 0, Math.PI * 2);
+      ctx.fillStyle = circle.color;
+      ctx.fill();
+      ctx.closePath();
+    }
+
+    function calculateDistance(x1, y1, x2, y2) {
+      // Pythagorean theorem to find the distance between two points
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    function checkCollision(circle1, circle2) {
+      // Calculate the distance between the centers of the circles
+      const distance = calculateDistance(circle1.x, circle1.y, circle2.x, circle2.y);
+      
+      // If the distance is less than the sum of the radii, the circles are colliding
+      return distance < (circle1.radius + circle2.radius);
+    }
+
+    function resolveCollision(circle1, circle2) {
+      // Vector between the centers of the circles
+      const dx = circle2.x - circle1.x;
+      const dy = circle2.y - circle1.y;
+      
+      // Calculate distance between circles
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      
+      // Normal vector (direction of collision)
+      const nx = dx / distance;
+      const ny = dy / distance;
+      
+      // Relative velocity
+      const vx = circle1.vx - circle2.vx;
+      const vy = circle1.vy - circle2.vy;
+      
+      // Velocity dot product with normal
+      const velocityDot = vx * nx + vy * ny;
+      
+      // If the circles are moving away from each other, no collision response needed
+      if (velocityDot > 0) return;
+      
+      // Calculate the impulse (force of the collision)
+      const impulseStrength = -2 * velocityDot / (circle1.mass + circle2.mass);
+      
+      // Apply impulse to each circle
+      circle1.vx -= (impulseStrength * circle2.mass * nx);
+      circle1.vy -= (impulseStrength * circle2.mass * ny);
+      circle2.vx += (impulseStrength * circle1.mass * nx);
+      circle2.vy += (impulseStrength * circle1.mass * ny);
+      
+      // Move circles apart to prevent sticking
+      const overlap = (circle1.radius + circle2.radius) - distance;
+      const moveX = nx * overlap * 0.5;
+      const moveY = ny * overlap * 0.5;
+      
+      circle1.x -= moveX;
+      circle1.y -= moveY;
+      circle2.x += moveX;
+      circle2.y += moveY;
+    }
+
+    function updateCirclePosition(circle) {
+      // Update position based on velocity
+      circle.x += circle.vx;
+      circle.y += circle.vy;
+      
+      // Bounce off walls
+      if (circle.x - circle.radius < 0 || circle.x + circle.radius > canvas.width) {
+        circle.vx = -circle.vx;
+        // Keep circle inside the canvas
+        circle.x = Math.max(circle.radius, Math.min(canvas.width - circle.radius, circle.x));
+      }
+      
+      if (circle.y - circle.radius < 0 || circle.y + circle.radius > canvas.height) {
+        circle.vy = -circle.vy;
+        // Keep circle inside the canvas
+        circle.y = Math.max(circle.radius, Math.min(canvas.height - circle.radius, circle.y));
+      }
+    }
+
+    function update() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Update circle1 position based on mouse
+      if (isMouseDown) {
+        const dx = mouseX - circle1.x;
+        const dy = mouseY - circle1.y;
+        circle1.vx = dx * 0.1 * (speed1Slider.value / 5);
+        circle1.vy = dy * 0.1 * (speed1Slider.value / 5);
+      }
+      
+      // Update circle2's speed based on slider
+      const speedRatio = speed2Slider.value / 5;
+      const currentSpeed = Math.sqrt(circle2.vx * circle2.vx + circle2.vy * circle2.vy);
+      if (currentSpeed > 0) {
+        circle2.vx = circle2.vx / currentSpeed * speedRatio * 2;
+        circle2.vy = circle2.vy / currentSpeed * speedRatio * 2;
+      }
+      
+      // Update circles' positions
+      updateCirclePosition(circle1);
+      updateCirclePosition(circle2);
+      
+      // Check and resolve collision
+      if (checkCollision(circle1, circle2)) {
+        resolveCollision(circle1, circle2);
+      }
+      
+      // Draw circles
+      drawCircle(circle1);
+      drawCircle(circle2);
+      
+      requestAnimationFrame(update);
+    }
+
+    // Start the animation
+    update();
+  </script>
+</body>
+</html>
