@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Soft Body Circle Physics</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-family: Arial, sans-serif;
+      background-color: #f5f5f5;
+    }
+    canvas {
+      border: 1px solid #333;
+      margin-top: 10px;
+      background-color: white;
+    }
+    .controls {
+      margin-top: 10px;
+      padding: 10px;
+      background-color: #e0e0e0;
+      border-radius: 5px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      max-width: 800px;
+    }
+    .slider-container {
+      display: flex;
+      flex-direction: column;
+      min-width: 150px;
+    }
+    label {
+      margin-bottom: 5px;
+    }
+    button {
+      padding: 8px 12px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    .description {
+      margin: 10px 20px;
+      max-width: 800px;
+      text-align: left;
+    }
+  </style>
+</head>
+<body>
+  <h2>Soft Body Circle Simulator</h2>
+  <div class="controls">
+    <div class="slider-container">
+      <label for="sizeSlider">Circle Size: <span id="sizeValue">30</span></label>
+      <input type="range" id="sizeSlider" min="15" max="100" value="30">
+    </div>
+    <div class="slider-container">
+      <label for="pointsSlider">Points: <span id="pointsValue">12</span></label>
+      <input type="range" id="pointsSlider" min="6" max="32" value="12" step="2">
+    </div>
+    <div class="slider-container">
+      <label for="stiffnessSlider">Stiffness: <span id="stiffnessValue">0.3</span></label>
+      <input type="range" id="stiffnessSlider" min="0.1" max="0.9" value="0.3" step="0.1">
+    </div>
+    <div class="slider-container">
+      <label for="dampingSlider">Damping: <span id="dampingValue">0.8</span></label>
+      <input type="range" id="dampingSlider" min="0.5" max="0.99" value="0.8" step="0.01">
+    </div>
+    <button id="resetBtn">Reset Simulation</button>
+  </div>
+  <canvas id="canvas" width="800" height="500"></canvas>
+  <div class="description">
+    <p><strong>How to use:</strong> Click and drag to move the soft body circle. Adjust the sliders to change its properties.</p>
+    <p><strong>Size:</strong> Changes the radius of the circle.</p>
+    <p><strong>Points:</strong> Changes the number of points that make up the circle (more points = smoother but slower).</p>
+    <p><strong>Stiffness:</strong> How rigid the circle is (higher = less deformation).</p>
+    <p><strong>Damping:</strong> How quickly the circle returns to shape (higher = faster recovery).</p>
+  </div>
+
+  <script>
+    // Get DOM elements
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const resetBtn = document.getElementById('resetBtn');
+    const sizeSlider = document.getElementById('sizeSlider');
+    const pointsSlider = document.getElementById('pointsSlider');
+    const stiffnessSlider = document.getElementById('stiffnessSlider');
+    const dampingSlider = document.getElementById('dampingSlider');
+    const sizeValue = document.getElementById('sizeValue');
+    const pointsValue = document.getElementById('pointsValue');
+    const stiffnessValue = document.getElementById('stiffnessValue');
+    const dampingValue = document.getElementById('dampingValue');
+    
+    // Physics constants
+    const GRAVITY = 0.5;
+    const BOUNCE = 0.8; // Wall bounce coefficient
+    const MOUSE_INFLUENCE = 0.4;
+    const MOUSE_PULL = 0.09;
+    
+    // Track mouse
+    let mouse = { x: 0, y: 0, down: false };
+    
+    // Soft Body Circle class
+    class SoftBodyCircle {
+      constructor(x, y, radius, numPoints, stiffness, damping) {
+        this.center = { x, y };
+        this.radius = radius;
+        this.numPoints = numPoints;
+        this.stiffness = stiffness;
+        this.damping = damping;
+        this.points = [];
+        this.createPoints();
+      }
+      
+      createPoints() {
+        this.points = [];
+        // Create points around the circle
+        for (let i = 0; i < this.numPoints; i++) {
+          const angle = (i / this.numPoints) * Math.PI * 2;
+          const x = this.center.x + Math.cos(angle) * this.radius;
+          const y = this.center.y + Math.sin(angle) * this.radius;
+          
+          this.points.push({
+            x: x,
+            y: y,
+            oldX: x, // Previous position (for verlet integration)
+            oldY: y,
+            angle: angle,
+            restLength: this.radius // Original distance from center
+          });
+        }
+      }
+      
+      updateCenter() {
+        let totalX = 0;
+        let totalY = 0;
+        
+        // Calculate center point from all vertices
+        this.points.forEach(point => {
+          totalX += point.x;
+          totalY += point.y;
+        });
+        
+        this.center.x = totalX / this.points.length;
+        this.center.y = totalY / this.points.length;
+      }
+      
+      update() {
+        // Update each point with physics
+        this.points.forEach(point => {
+          // Store previous position
+          const prevX = point.x;
+          const prevY = point.y;
+          
+          // Verlet integration for position
+          const velocityX = (point.x - point.oldX) * this.damping;
+          const velocityY = (point.y - point.oldY) * this.damping;
+          
+          // Calculate new position
+          point.x += velocityX;
+          point.y += velocityY + GRAVITY;
+          
+          // Store old position
+          point.oldX = prevX;
+          point.oldY = prevY;
+          
+          // Handle wall collisions
+          this.handleWallCollision(point);
+          
+          // Handle mouse interaction
+          this.handleMouseInteraction(point);
+        });
+        
+        // Update center position
+        this.updateCenter();
+        
+        // Apply constraints to maintain circle shape
+        this.applyConstraints();
+      }
+      
+      handleWallCollision(point) {
+        const boundaryPadding = 5;
+        
+        // Floor collision
+        if (point.y > canvas.height - boundaryPadding) {
+          point.y = canvas.height - boundaryPadding;
+          point.oldY = point.y + (point.y - point.oldY) * BOUNCE;
+        }
+        
+        // Ceiling collision
+        if (point.y < boundaryPadding) {
+          point.y = boundaryPadding;
+          point.oldY = point.y + (point.y - point.oldY) * BOUNCE;
+        }
+        
+        // Right wall collision
+        if (point.x > canvas.width - boundaryPadding) {
+          point.x = canvas.width - boundaryPadding;
+          point.oldX = point.x + (point.x - point.oldX) * BOUNCE;
+        }
+        
+        // Left wall collision
+        if (point.x < boundaryPadding) {
+          point.x = boundaryPadding;
+          point.oldX = point.x + (point.x - point.oldX) * BOUNCE;
+        }
+      }
+      
+      handleMouseInteraction(point) {
+        if (mouse.down) {
+          // Calculate distance between mouse and point
+          const dx = mouse.x - point.x;
+          const dy = mouse.y - point.y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          
+          // If mouse is close enough, pull the point toward the mouse
+          if (distance < this.radius * 2) {
+            const influence = (1 - (distance / (this.radius * 2))) * MOUSE_INFLUENCE;
+            point.x += dx * influence;
+            point.y += dy * influence;
+          }
+          
+          // Also add a general pull toward the mouse
+          point.x += dx * MOUSE_PULL;
+          point.y += dy * MOUSE_PULL;
+        }
+      }
+      
+      applyConstraints() {
+        // For each point, maintain distance from center
+        this.points.forEach(point => {
+          // Calculate current distance from center
+          const dx = point.x - this.center.x;
+          const dy = point.y - this.center.y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          
+          // Calculate the direction vector
+          const dirX = dx / distance;
+          const dirY = dy / distance;
+          
+          // Calculate desired distance (original radius)
+          const deviation = distance - point.restLength;
+          
+          // Apply correction based on stiffness
+          point.x -= dirX * deviation * this.stiffness;
+          point.y -= dirY * deviation * this.stiffness;
+        });
+        
+        // Apply constraints between neighboring points (optional, for more stability)
+        for (let i = 0; i < this.points.length; i++) {
+          const p1 = this.points[i];
+          const p2 = this.points[(i + 1) % this.points.length]; // Wrap around to first point
+          
+          // Calculate current distance between points
+          const dx = p2.x - p1.x;
+          const dy = p2.y - p1.y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          
+          // Calculate desired distance (based on circle circumference)
+          const restLength = (2 * Math.PI * this.radius) / this.numPoints;
+          
+          // Calculate adjustment
+          const adjustment = (distance - restLength) / 2;
+          
+          if (distance > 0) {
+            // Direction vector
+            const dirX = dx / distance;
+            const dirY = dy / distance;
+            
+            // Move points closer or farther
+            p1.x += dirX * adjustment * this.stiffness;
+            p1.y += dirY * adjustment * this.stiffness;
+            p2.x -= dirX * adjustment * this.stiffness;
+            p2.y -= dirY * adjustment * this.stiffness;
+          }
+        }
+      }
+      
+      draw() {
+        // Draw filled shape
+        ctx.beginPath();
+        ctx.moveTo(this.points[0].x, this.points[0].y);
+        
+        for (let i = 1; i < this.points.length; i++) {
+          ctx.lineTo(this.points[i].x, this.points[i].y);
+        }
+        
+        ctx.closePath();
+        
+        // Fill with gradient
+        const gradient = ctx.createRadialGradient(
+          this.center.x, this.center.y, 0,
+          this.center.x, this.center.y, this.radius
+        );
+        gradient.addColorStop(0, 'rgba(100, 150, 255, 0.7)');
+        gradient.addColorStop(1, 'rgba(50, 100, 200, 0.5)');
+        ctx.fillStyle = gradient;
+        ctx.fill();
+        
+        // Draw outline
+        ctx.strokeStyle = 'rgba(30, 80, 160, 0.8)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        
+        // Draw inner structure for visual effect
+        ctx.beginPath();
+        ctx.arc(this.center.x, this.center.y, 4, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(30, 80, 160, 0.8)';
+        ctx.fill();
+        
+        // Draw points
+        this.points.forEach(point => {
+          ctx.beginPath();
+          ctx.arc(point.x, point.y, 3, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(20, 70, 150, 0.6)';
+          ctx.fill();
+        });
+      }
+      
+      resize(newRadius) {
+        // Update radius
+        this.radius = newRadius;
+        
+        // Update rest length for all points
+        this.points.forEach(point => {
+          point.restLength = newRadius;
+        });
+      }
+      
+      updateProperties(numPoints, stiffness, damping) {
+        const needRecreate = numPoints !== this.numPoints;
+        
+        this.numPoints = numPoints;
+        this.stiffness = stiffness;
+        this.damping = damping;
+        
+        if (needRecreate) {
+          // If we change the number of points, recreate the shape
+          this.createPoints();
+        }
+      }
+    }
+    
+    // Create the soft body circle
+    let circle;
+    
+    // Initialize the simulation
+    function init() {
+      // Create circle in the center of the canvas
+      circle = new SoftBodyCircle(
+        canvas.width / 2,
+        canvas.height / 2,
+        parseInt(sizeSlider.value),
+        parseInt(pointsSlider.value),
+        parseFloat(stiffnessSlider.value),
+        parseFloat(dampingSlider.value)
+      );
+    }
+    
+    // Animation loop
+    function animate() {
+      // Clear canvas
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Update circle
+      circle.update();
+      
+      // Draw circle
+      circle.draw();
+      
+      // Request next frame
+      requestAnimationFrame(animate);
+    }
+    
+    // Event listeners for mouse
+    canvas.addEventListener('mousedown', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      mouse.x = e.clientX - rect.left;
+      mouse.y = e.clientY - rect.top;
+      mouse.down = true;
+    });
+    
+    canvas.addEventListener('mousemove', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      mouse.x = e.clientX - rect.left;
+      mouse.y = e.clientY - rect.top;
+    });
+    
+    canvas.addEventListener('mouseup', () => {
+      mouse.down = false;
+    });
+    
+    canvas.addEventListener('mouseleave', () => {
+      mouse.down = false;
+    });
+    
+    // Event listeners for sliders
+    sizeSlider.addEventListener('input', () => {
+      sizeValue.textContent = sizeSlider.value;
+      circle.resize(parseInt(sizeSlider.value));
+    });
+    
+    pointsSlider.addEventListener('input', () => {
+      pointsValue.textContent = pointsSlider.value;
+      circle.updateProperties(
+        parseInt(pointsSlider.value),
+        parseFloat(stiffnessSlider.value),
+        parseFloat(dampingSlider.value)
+      );
+    });
+    
+    stiffnessSlider.addEventListener('input', () => {
+      stiffnessValue.textContent = stiffnessSlider.value;
+      circle.updateProperties(
+        parseInt(pointsSlider.value),
+        parseFloat(stiffnessSlider.value),
+        parseFloat(dampingSlider.value)
+      );
+    });
+    
+    dampingSlider.addEventListener('input', () => {
+      dampingValue.textContent = dampingSlider.value;
+      circle.updateProperties(
+        parseInt(pointsSlider.value),
+        parseFloat(stiffnessSlider.value),
+        parseFloat(dampingSlider.value)
+      );
+    });
+    
+    // Reset button
+    resetBtn.addEventListener('click', () => {
+      init();
+    });
+    
+    // Initialize and start animation
+    init();
+    animate();
+  </script>
+</body>
+</html>
